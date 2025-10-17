@@ -1,20 +1,60 @@
-from flask import Flask, request, jsonify
+import os
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-from flask_pymysql import MySQL 
+from flask_pymysql import MySQL
 
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}) 
+backend_dir = os.path.abspath(os.path.dirname(__file__))
+root_dir = os.path.abspath(os.path.join(backend_dir, '..'))
+frontend_dir = os.path.join(root_dir, 'frontend')
 
+app = Flask(__name__,
+            template_folder=os.path.join(frontend_dir, 'html'),
+            static_folder=frontend_dir, static_url_path='')
+
+CORS(app)
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '123456'
+app.config['MYSQL_PASSWORD'] = '123456' 
 app.config['MYSQL_DB'] = 'code_battle'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor' 
-
 mysql = MySQL(app)
 
-@app.route('/login', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
+def handle_register():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    fullName = data.get('fullName')
+
+    import random
+    user_id = f"U{random.randint(1000, 9999)}"
+    
+    try:
+        cursor = mysql.connection.cursor()
+        
+        cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            cursor.close()
+            return jsonify({"message": "Username already exists"}), 409 # 409 Conflict
+
+        cursor.execute(
+            "INSERT INTO users (id, username, password, fullName) VALUES (%s, %s, %s, %s)",
+            (user_id, username, password, fullName)
+        )
+        mysql.connection.commit()
+        cursor.close()
+        
+        print(f"🎉 Người dùng mới đã đăng ký: {username}")
+        return jsonify({"message": "User registered successfully"}), 201 # 201 Created
+
+    except Exception as e:
+        print(f"Lỗi khi đăng ký: {e}")
+        return jsonify({"message": "Server error during registration"}), 500
+
+@app.route('/api/login', methods=['POST'])
 def handle_login():
     data = request.get_json()
     username = data.get('username')
@@ -42,6 +82,18 @@ def handle_login():
     except Exception as e:
         print(f"Lỗi khi truy vấn CSDL: {e}")
         return jsonify({"message": "Server error"}), 500
+
+@app.route('/')
+def serve_login_page():
+    return render_template('login.html')
+
+@app.route('/register')
+def serve_register_page():
+    return render_template('register.html')
+
+@app.route('/dashboard')
+def serve_dashboard_page():
+    return render_template('dashboard.html')
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 user_sids = {}
@@ -83,4 +135,5 @@ def handle_send_challenge(data):
         print(f"🤷 Opponent {opponent_id} not found or is offline.")
 
 if __name__ == '__main__':
+    print("🚀 Code Battle Server is starting at http://127.0.0.1:5000")
     socketio.run(app, port=5000, debug=True)

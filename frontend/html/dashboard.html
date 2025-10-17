@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Battle - Dashboard</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">CB</div>
+                <span>Code Battle</span>
+            </div>
+            <div class="user-info">
+                <div class="user-details">
+                    <div class="user-name">Binh Le Ho Thanh</div>
+                    <div class="user-id">#12564</div>
+                    <div class="user-rank">
+                        <span class="rank-badge rank-gold">Gold</span>
+                        <span>1247 ELO</span>
+                    </div>
+                </div>
+                <div class="user-avatar">BL</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-trophy"></i></div>
+                <div class="stat-label">Total Battles</div>
+                <div class="stat-value">42</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+                <div class="stat-label">Win Rate</div>
+                <div class="stat-value">67%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
+                <div class="stat-label">Current Streak</div>
+                <div class="stat-value">5</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="stat-label">Global Rank</div>
+                <div class="stat-value">#127</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div>
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Find Opponent</h2>
+                    </div>
+
+                    <div class="battle-actions" id="quickMatchBtn">
+                        <button class="btn btn-primary">
+                            <i class="fa-solid fa-swords"></i> Quick Match
+                        </button>
+                    </div>
+
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Search by ID or username...">
+                    </div>
+
+                    <div class="player-list">
+                        <div class="player-item">
+                            <div class="player-avatar">NL</div>
+                            <div class="player-info">
+                                <div class="player-name">Nhat Le Van</div>
+                                <div class="player-id">#B002</div> <div class="player-stats">
+                                    <span class="status-online"></span>
+                                    <span class="rank-badge rank-platinum">Platinum</span>
+                                    <span>1580 ELO</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-small btn-challenge" 
+                                    data-opponent-id="B002" 
+                                    data-opponent-name="Nhat Le Van">Challenge</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section mt-20">
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Battles</h2>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+
+                    <div class="battle-item">
+                        <div class="battle-result battle-win">WIN</div>
+                        <div class="battle-info">
+                            <div class="battle-opponent">vs. Nhat Le Van</div>
+                            <div class="battle-time">2 hours ago • Two Sum Problem</div>
+                        </div>
+                        <div class="battle-score">100 - 85</div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Leaderboard</h2>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+
+                    <div class="leaderboard-item">
+                        <div class="leaderboard-rank">1</div>
+                        <div class="leaderboard-avatar">AN</div>
+                        <div class="leaderboard-info">
+                            <div class="leaderboard-name">Alex Nguyen</div>
+                        </div>
+                        <div class="leaderboard-points">2450</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="match-waiting-overlay" id="matchWaitingModal">
+        <div class="match-waiting-box">
+            <div class="waiting-avatar">NL</div>
+            <h2 class="waiting-name">Nhat Le Van</h2>
+            <p class="waiting-id">#12345</p>
+            <p class="waiting-text">Đang chờ đối thủ chấp nhận trận đấu...</p>
+            <div class="waiting-timer">
+                <i class="fa-regular fa-clock"></i> <span id="waitingTimer">10</span>s
+            </div>
+            <button class="btn btn-secondary btn-small" id="cancelMatchBtn">
+                <i class="fa-solid fa-xmark"></i> Hủy
+            </button>
+        </div>
+    </div>
+
+    <div class="challenge-notification" id="challengeNotification">
+        <div class="challenge-info">
+            <div class="challenge-avatar">AN</div>
+            <div>
+                <div class="challenge-name">Alex Nguyen</div>
+                <div class="challenge-id">#56789</div>
+                <div class="challenge-text">mời bạn vào Code Battle!</div>
+            </div>
+        </div>
+        <div class="challenge-actions">
+            <button class="btn btn-accept" id="acceptInviteBtn">
+                <i class="fa-solid fa-check"></i>
+            </button>
+            <button class="btn btn-decline" id="declineInviteBtn">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+    
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/js/dashboard.js"></script>
+</body>
+</html>
