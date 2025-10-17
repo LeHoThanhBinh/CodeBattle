@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Battle</title>
+
+    <!-- Liên kết tới tất cả các file CSS cần thiết -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/login.css">
+    <link rel="stylesheet" href="/css/pages/register.css">
+</head>
+<body>
+    <!-- Vùng chứa cho Navbar (nếu có) -->
+    <header id="navbar-container"></header>
+
+    <!-- Nội dung chính của ứng dụng sẽ được JS "bơm" vào đây -->
+    <main id="app"></main>
+
+    <!-- Vùng chứa cho Footer (nếu có) -->
+    <footer id="footer-container"></footer>
+
+    <!-- ✅ ĐÃ SỬA: Thay thế link CDN unpkg bằng jsDelivr để đảm bảo tải thành công -->
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.js"></script>
+
+    <!-- Tải file JavaScript chính, type="module" là bắt buộc -->
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,23 @@
+{
+  "name": "codebattle",
+  "version": "1.0.0",
+  "description": "A real-time coding battle platform built with Django and Vanilla JavaScript.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeHoThanhBinh/CodeBattle.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LeHoThanhBinh/CodeBattle/issues"
+  },
+  "homepage": "https://github.com/LeHoThanhBinh/CodeBattle#readme",
+  "dependencies": {
+    "jwt-decode": "^4.0.0"
+  }
+}
