@@ -2,8 +2,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics, status
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from .serializers import MyTokenObtainPairSerializer, RegisterSerializer
-from rest_framework.permissions import AllowAny
+# --- ĐÃ SỬA LỖI: Bổ sung các import còn thiếu ---
+from .serializers import MyTokenObtainPairSerializer, RegisterSerializer, UserProfileSerializer
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 # View cho việc đăng nhập (lấy token)
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -42,4 +43,15 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
+
+# View này xử lý yêu cầu lấy thông tin profile của người dùng đang đăng nhập
+class UserProfileView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserProfileSerializer   # <<< Giờ đã hợp lệ
+    permission_classes = [IsAuthenticated] # <<< Giờ đã hợp lệ
+
+    def get_object(self):
+        # Trả về đối tượng user của chính request đang gửi lên,
+        # không cần lấy id từ URL
+        return self.request.user
 

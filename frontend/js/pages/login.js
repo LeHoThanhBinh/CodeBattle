@@ -1,24 +1,27 @@
 import { loginUser } from '../services/auth.js';
+import { saveTokens } from '../services/storage.js';
 
 /**
- * Xử lý sau khi đăng nhập thành công: lưu token và chuyển hướng.
+ * Xử lý sau khi đăng nhập thành công: lưu token và chuyển hướng bằng router.
  * @param {object} responseData - Dữ liệu trả về từ API.
+ * @param {function} router - Hàm router từ main.js.
  */
-function handleSuccessfulLogin(responseData) {
+function handleSuccessfulLogin(responseData, router) {
     const { access, refresh } = responseData;
-    localStorage.setItem('accessToken', access);
-    localStorage.setItem('refreshToken', refresh);
+    saveTokens(access, refresh); // Dùng hàm từ storage.js để lưu vào sessionStorage
 
     try {
         // Thư viện jwt_decode đã được load từ CDN trong index.html
         const decodedToken = jwt_decode(access);
         const isAdmin = decodedToken.is_admin || false;
 
-        // Chuyển hướng dựa trên vai trò
-        window.location.href = isAdmin ? '/admin/dashboard' : '/dashboard';
+        // Chuyển hướng bằng router để tránh tải lại toàn bộ trang
+        const path = isAdmin ? '/admin/dashboard' : '/dashboard';
+        history.pushState(null, null, path); // Cập nhật URL trên thanh địa chỉ
+        router(); // Gọi router để render trang mới
+
     } catch (error) {
         console.error("Failed to decode token:", error);
-        // Có thể hiển thị một lỗi chung nếu token không hợp lệ
         displayError("Đã xảy ra lỗi. Vui lòng thử lại.");
     }
 }
@@ -36,11 +39,21 @@ function displayError(message) {
 }
 
 /**
+ * Kích hoạt lại nút submit sau khi có lỗi.
+ * @param {HTMLButtonElement} button - Nút submit.
+ */
+function resetButton(button) {
+    button.disabled = false;
+    button.textContent = 'Đăng Nhập';
+}
+
+/**
  * Xử lý sự kiện submit của form đăng nhập.
  * @param {Event} event - Sự kiện submit.
  * @param {HTMLFormElement} form - Form đăng nhập.
+ * @param {function} router - Hàm router từ main.js.
  */
-async function handleLoginSubmit(event, form) {
+async function handleLoginSubmit(event, form, router) {
     event.preventDefault();
 
     const submitButton = form.querySelector('button[type="submit"]');
@@ -56,22 +69,23 @@ async function handleLoginSubmit(event, form) {
 
     try {
         const responseData = await loginUser(username, password);
-        handleSuccessfulLogin(responseData);
+        handleSuccessfulLogin(responseData, router);
     } catch (err) {
         // Hiển thị lỗi và kích hoạt lại nút
         displayError('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
-        submitButton.disabled = false;
-        submitButton.textContent = 'Đăng Nhập';
+        resetButton(submitButton);
     }
 }
 
 /**
  * Khởi tạo logic cho trang đăng nhập.
+ * @param {function} router - Hàm router từ main.js để có thể gọi lại khi cần.
  */
-export function initLoginPage() {
+export function initLoginPage(router) {
     const form = document.getElementById('login-form');
     if (!form) return;
 
-    // Gắn sự kiện submit vào form, truyền chính nó vào hàm xử lý
-    form.addEventListener('submit', (e) => handleLoginSubmit(e, form));
+    // Gắn sự kiện submit vào form, truyền cả router vào hàm xử lý
+    form.addEventListener('submit', (e) => handleLoginSubmit(e, form, router));
 }
+
