@@ -1,57 +1,86 @@
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import generics, status
-from rest_framework.response import Response
+from rest_framework import generics, views, response
 from django.contrib.auth.models import User
-# --- ĐÃ SỬA LỖI: Bổ sung các import còn thiếu ---
-from .serializers import MyTokenObtainPairSerializer, RegisterSerializer, UserProfileSerializer
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import (
+    MyTokenObtainPairSerializer, 
+    RegisterSerializer, 
+    UserProfileSerializer, 
+    UserStatsSerializer
+)
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from .models import UserProfile
 
-# View cho việc đăng nhập (lấy token)
+# --- View cho việc đăng nhập (không thay đổi) ---
 class MyTokenObtainPairView(TokenObtainPairView):
+    """
+    Handles the login request and returns access/refresh tokens.
+    """
     serializer_class = MyTokenObtainPairSerializer
 
-    # --- BẮT ĐẦU ĐOẠN CODE GỠ LỖI ---
-    def post(self, request, *args, **kwargs):
-        """
-        Ghi đè phương thức post để in ra dữ liệu nhận được trước khi xử lý.
-        """
-        print("==============================================")
-        print(">>> BACKEND NHẬN ĐƯỢC YÊU CẦU ĐĂNG NHẬP <<<")
-        print(f"Dữ liệu nhận được (raw): {request.data}")
-        print("==============================================")
-        
-        # Chạy logic đăng nhập gốc của thư viện
-        try:
-            response = super().post(request, *args, **kwargs)
-            if response.status_code == 200:
-                print("--- KẾT QUẢ: XÁC THỰC THÀNH CÔNG (Mật khẩu đúng) ---")
-            else:
-                # Trường hợp này ít xảy ra, nhưng vẫn log lại
-                print(f"--- KẾT QUẢ: XÁC THỰC THẤT BẠI (Mã lỗi: {response.status_code}) ---")
-            return response
-        except Exception as e:
-            print(f"--- KẾT QUẢ: XÁC THỰC THẤT BẠI - Lỗi: {e} ---")
-            # Trả về lỗi 401 Unauthorized mặc định
-            return Response(
-                {"detail": "No active account found with the given credentials"},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-    # --- KẾT THÚC ĐOẠN CODE GỠ LỖI ---
-
-# View cho việc đăng ký tài khoản mới
+# --- View cho việc đăng ký (không thay đổi) ---
 class RegisterView(generics.CreateAPIView):
+    """
+    Handles new user registration.
+    """
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = RegisterSerializer
 
-# View này xử lý yêu cầu lấy thông tin profile của người dùng đang đăng nhập
+# --- API View cho thông tin profile (header) ---
 class UserProfileView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserProfileSerializer   # <<< Giờ đã hợp lệ
-    permission_classes = [IsAuthenticated] # <<< Giờ đã hợp lệ
+    """
+    Returns the basic information of the user (id, username, rating).
+    """
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        # Trả về đối tượng user của chính request đang gửi lên,
-        # không cần lấy id từ URL
         return self.request.user
+
+# --- API View cho các thẻ thống kê ---
+class UserStatsView(generics.RetrieveAPIView):
+    """
+    Returns the statistics of the user (total battles, win rate, etc.).
+    """
+    serializer_class = UserStatsSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        # Returns the UserStats object associated with the current user
+        # via the related_name='stats' in models.py
+        return self.request.user.stats
+
+# --- API View cho danh sách người chơi online ---
+class OnlinePlayersView(generics.ListAPIView):
+    """
+    Returns a list of online players.
+    Supports searching via query param: ?search=<username>
+    """
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        search_term = self.request.query_params.get('search', None)
+        
+        # Filter users who are online and are not the current user
+        queryset = User.objects.select_related('userprofile').filter(
+            userprofile__is_online=True
+        ).exclude(id=self.request.user.id)
+
+        if search_term:
+            queryset = queryset.filter(username__icontains=search_term)
+            
+        return queryset
+
+# --- API View cho bảng xếp hạng (Leaderboard) ---
+class LeaderboardView(generics.ListAPIView):
+    """
+    Returns the top 5 players with the highest ELO.
+    """
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Sort users by rating in descending order and take the top 5
+        return User.objects.select_related('userprofile').order_by('-userprofile__rating')[:5]
 

@@ -1,97 +1,85 @@
-<div class="container">
-    <div class="header">
-        <div class="logo">
+<div class="dashboard-container">
+    <!-- Header -->
+    <header class="dashboard-header" id="userInfo">
+        <div class="logo-section">
             <div class="logo-icon">CB</div>
             <span>Code Battle</span>
         </div>
-        <!-- Thông tin người dùng sẽ được JS chèn vào đây -->
-        <div class="user-info" id="userInfo">
-            <div class="loading-spinner"></div>
-        </div>
-    </div>
-
-    <!-- Các thẻ thống kê sẽ được JS chèn vào đây -->
-    <div class="stats-grid" id="statsGrid"></div>
-
-    <div class="main-content">
-        <!-- Cột bên trái: Tìm đối thủ & Lịch sử đấu -->
-        <div>
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">Find Opponent</h2>
-                </div>
-                <div class="battle-actions">
-                    <button class="btn btn-primary" id="quickMatchBtn">
-                        <i class="fa-solid fa-swords"></i> Quick Match
-                    </button>
-                </div>
-                <div class="search-box">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" class="search-input" placeholder="Search by ID or username...">
-                </div>
-                <!-- Danh sách người chơi sẽ được JS chèn vào đây -->
-                <div class="player-list" id="playerList">
-                    <div class="loading-spinner"></div>
+        <div class="user-section">
+            <div class="user-details">
+                <div class="user-name" id="userName">---</div>
+                <div class="user-rating">
+                    <span class="rank-badge rank-gold">Gold</span>
+                    <span id="userElo">----</span> ELO
                 </div>
             </div>
+            <div class="user-avatar" id="userAvatar">--</div>
+            <button id="logoutBtn" class="btn btn-secondary btn-small" style="margin-left: 15px;">Đăng xuất</button>
+        </div>
+    </header>
 
-            <div class="section mt-20">
-                <div class="section-header">
-                    <h2 class="section-title">Recent Battles</h2>
-                    <a href="/history" class="view-all" data-link>View All →</a>
-                </div>
-                <!-- Lịch sử đấu sẽ được JS chèn vào đây -->
-                <div id="recentBattles"></div>
+    <!-- Stats Grid -->
+    <section class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+            <div class="stat-icon trophy"><i class="fa-solid fa-trophy"></i></div>
+            <div class="stat-info">
+                <div class="stat-value" id="totalBattlesStat">--</div>
+                <div class="stat-label">Total Battles</div>
             </div>
         </div>
-
-        <!-- Cột bên phải: Bảng xếp hạng -->
-        <div>
-            <div class="section">
-                <div class="section-header">
-                    <h2 class="section-title">Leaderboard</h2>
-                    <a href="/leaderboard" class="view-all" data-link>View All →</a>
-                </div>
-                <!-- Bảng xếp hạng sẽ được JS chèn vào đây -->
-                <div id="leaderboard"></div>
+        <div class="stat-card">
+            <div class="stat-icon bolt"><i class="fa-solid fa-bolt"></i></div>
+            <div class="stat-info">
+                <div class="stat-value" id="winRateStat">--%</div>
+                <div class="stat-label">Win Rate</div>
             </div>
         </div>
-    </div>
-
-    <!-- Modal chờ trận đấu -->
-    <div class="match-waiting-overlay" id="matchWaitingModal">
-        <div class="match-waiting-box">
-            <div class="waiting-avatar"></div>
-            <h2 class="waiting-name"></h2>
-            <p class="waiting-id"></p>
-            <p class="waiting-text">Waiting for opponent to accept...</p>
-            <div class="waiting-timer">
-                <i class="fa-regular fa-clock"></i> <span id="waitingTimer">10</span>s
+        <div class="stat-card">
+            <div class="stat-icon bullseye"><i class="fa-solid fa-bullseye"></i></div>
+            <div class="stat-info">
+                <div class="stat-value" id="streakStat">--</div>
+                <div class="stat-label">Current Streak</div>
             </div>
-            <button class="btn btn-secondary btn-small" id="cancelMatchBtn">
-                <i class="fa-solid fa-xmark"></i> Cancel
+        </div>
+         <div class="stat-card">
+            <div class="stat-icon chart-line"><i class="fa-solid fa-chart-line"></i></div>
+            <div class="stat-info">
+                <div class="stat-value" id="rankStat">#--</div>
+                <div class="stat-label">Global Rank</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Find Opponent Panel -->
+        <div class="panel find-opponent-panel">
+            <h2 class="panel-title">Find Opponent</h2>
+            <button class="btn-quick-match" id="quickMatchBtn">
+                <i class="fa-solid fa-swords"></i> Quick Match
             </button>
-        </div>
-    </div>
-
-    <!-- Thông báo thách đấu -->
-    <div class="challenge-notification" id="challengeNotification">
-        <div class="challenge-info">
-            <div class="challenge-avatar"></div>
-            <div>
-                <div class="challenge-name"></div>
-                <div class="challenge-id"></div>
-                <div class="challenge-text">invites you to a Code Battle!</div>
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search by ID or username...">
+            </div>
+            <h3 class="online-players-title">Online Players (<span id="onlineCount">0</span>)</h3>
+            <!-- Danh sách người chơi sẽ được JS chèn vào đây -->
+            <div class="player-list" id="playerList">
+                <div class="loading-spinner"></div>
             </div>
         </div>
-        <div class="challenge-actions">
-            <button class="btn btn-accept" id="acceptInviteBtn">
-                <i class="fa-solid fa-check"></i>
-            </button>
-            <button class="btn btn-decline" id="declineInviteBtn">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+
+        <!-- Leaderboard Panel -->
+        <div class="panel leaderboard-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Leaderboard</h2>
+                <a href="/leaderboard" class="view-all-link" data-link>View All →</a>
+            </div>
+            <!-- Bảng xếp hạng sẽ được JS chèn vào đây -->
+            <div class="leaderboard-list" id="leaderboardList">
+                 <div class="loading-spinner"></div>
+            </div>
         </div>
-    </div>
+    </main>
 </div>
 
