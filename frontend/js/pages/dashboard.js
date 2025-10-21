@@ -13,29 +13,28 @@ function debounce(func, delay) {
 
 /**
  * Hàm chính khởi tạo logic cho trang Dashboard.
+ * @param {function} router - Hàm router từ main.js.
  */
-export async function initDashboardPage() {
-    console.log("Dashboard page V3 initialized");
+export async function initDashboardPage(router) {
+    console.log("Dashboard page V4 initialized");
 
-    // Lấy tất cả dữ liệu song song để tải trang nhanh hơn
     Promise.all([
         getUserProfile(),
         apiFetch('/api/stats/'),
         apiFetch('/api/online-players/'),
         apiFetch('/api/leaderboard/')
     ]).then(([profile, stats, players, leaderboard]) => {
-        // Sau khi có đủ dữ liệu, cập nhật giao diện
         updateHeader(profile);
         updateStats(stats, profile);
         renderOnlinePlayers(players);
         renderLeaderboard(leaderboard, profile.id);
         
-        setupEventListeners(profile);
+        // Truyền router vào hàm gán sự kiện
+        setupEventListeners(profile, router);
     }).catch(error => {
         console.error("Failed to load dashboard data:", error);
     });
 }
-
 
 // --- CÁC HÀM CẬP NHẬT GIAO DIỆN ---
 
@@ -58,14 +57,11 @@ function renderOnlinePlayers(players) {
     const playerList = document.getElementById('playerList');
     const onlineCount = document.getElementById('onlineCount');
     if (!playerList || !onlineCount) return;
-    
     onlineCount.textContent = players.length;
-
     if (players.length === 0) {
         playerList.innerHTML = `<p style="opacity: 0.7; text-align: center;">No other players are online.</p>`;
         return;
     }
-
     playerList.innerHTML = players.map(player => {
         const rank = player.rating > 1800 ? 'diamond' : player.rating > 1400 ? 'gold' : 'silver';
         return `
@@ -87,7 +83,6 @@ function renderOnlinePlayers(players) {
 function renderLeaderboard(players, currentUserId) {
     const leaderboardList = document.getElementById('leaderboardList');
     if (!leaderboardList) return;
-
     leaderboardList.innerHTML = players.map((player, index) => `
         <div class="leaderboard-item ${player.id === currentUserId ? 'leaderboard-you' : ''}">
             <div class="leaderboard-rank">${index + 1}</div>
@@ -103,18 +98,21 @@ function renderLeaderboard(players, currentUserId) {
 
 // --- HÀM GÁN CÁC TRÌNH LẮNG NGHE SỰ KIỆN ---
 
-function setupEventListeners(currentUser) {
+function setupEventListeners(currentUser, router) {
+    // --- ĐÃ SỬA LỖI: Logic cho nút Đăng xuất ---
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            clearTokens();
-            window.location.href = '/login';
+            clearTokens(); // Xóa token khỏi sessionStorage
+            
+            // Dùng router để chuyển trang thay vì tải lại
+            history.pushState(null, null, '/login');
+            router();
         });
     }
 
     const searchInput = document.getElementById('searchInput');
     if(searchInput) {
-        // Dùng debounce để chỉ tìm kiếm sau khi người dùng ngừng gõ 300ms
         searchInput.addEventListener('input', debounce(async (e) => {
             const searchTerm = e.target.value;
             const players = await apiFetch(`/api/online-players/?search=${searchTerm}`);
