@@ -50,13 +50,13 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'channels',
-    'mssql',
+    # 'mssql',  # <-- ĐÃ XÓA DÒNG NÀY
 
     # Các app của dự án
     'users',
-    'problems',
-    'matches',
-    'submissions',
+    # 'problems', # Bạn có thể thêm lại các app của mình nếu cần
+    # 'matches',
+    # 'submissions',
 ]
 
 MIDDLEWARE = [
@@ -99,15 +99,13 @@ ASGI_APPLICATION = 'code_battle_api.asgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=BASE_DIR / 'db.sqlite3'),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
-        'OPTIONS': {
-            'driver': config('DB_OPTIONS_DRIVER', default=''),
-        },
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
+        # KHỐI OPTIONS GÂY LỖI ĐÃ BỊ XÓA HOÀN TOÀN
     }
 }
 
@@ -174,4 +172,3 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
