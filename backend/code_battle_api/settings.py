@@ -15,9 +15,11 @@ from datetime import timedelta
 from decouple import Config, RepositoryEnv
 
 # --- START: Cấu hình đọc file .env ---
-# Phần này của bạn đã đúng, giữ nguyên.
+# Xác định thư mục gốc của backend
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Tạo đường dẫn tuyệt đối đến file .env
 ENV_FILE_PATH = BASE_DIR / '.env'
+# Tạo một đối tượng config để đọc các biến từ file .env
 config = Config(RepositoryEnv(ENV_FILE_PATH))
 # --- END: Cấu hình đọc file .env ---
 
@@ -47,6 +49,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'channels',
+    'mssql',
 
     # Các app của dự án
     'users',
@@ -66,7 +70,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ❗ SỬA LỖI: Thêm dòng này để Django biết file URL chính ở đâu
+# Chỉ định file urls.py chính cho dự án
 ROOT_URLCONF = 'code_battle_api.urls'
 
 TEMPLATES = [
@@ -85,7 +89,10 @@ TEMPLATES = [
     },
 ]
 
+# Cấu hình cho server WSGI (cho các request HTTP thông thường)
 WSGI_APPLICATION = 'code_battle_api.wsgi.application'
+# Cấu hình cho server ASGI (cho WebSocket)
+ASGI_APPLICATION = 'code_battle_api.asgi.application'
 
 
 # Database
@@ -151,9 +158,20 @@ REST_FRAMEWORK = {
 
 # Simple JWT
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60), # Tăng thời gian token
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
 # CORS
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://127.0.0.1:5500', cast=lambda v: [s.strip() for s in v.split(',')])
+
+# Django Channels (dùng Redis làm backend)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [config('REDIS_URL', default='redis://localhost:6379/1')],
+        },
+    },
+}
+

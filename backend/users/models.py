@@ -4,8 +4,10 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 class UserProfile(models.Model):
+    """
+    Model để mở rộng thông tin cơ bản của người dùng.
+    """
     # Liên kết một-một với model User gốc của Django.
-    # Đây là cách làm chuẩn để mở rộng thông tin người dùng.
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     
     # Các trường thông tin bổ sung
@@ -17,10 +19,16 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.username
 
-# --- MODEL MỚI: Để lưu trữ thống kê người dùng ---
+# -----------------------------------------------------------------------------
+
 class UserStats(models.Model):
+    """
+    Model để lưu trữ các chỉ số và thống kê liên quan đến game của người dùng.
+    """
     # Liên kết một-một với User, dùng related_name để truy cập dễ dàng từ user.stats
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='stats')
+    
+    # Các chỉ số game, mặc định là 0 cho người dùng mới
     total_battles = models.IntegerField(default=0)
     wins = models.IntegerField(default=0)
     current_streak = models.IntegerField(default=0)
@@ -38,31 +46,21 @@ class UserStats(models.Model):
     def __str__(self):
         return f"Stats for {self.user.username}"
 
+# -----------------------------------------------------------------------------
 
-# --- Tín hiệu (Signals) ---
-# Tự động tạo UserProfile và UserStats khi một User mới được tạo
+# --- Tín hiệu (Signal) ---
 @receiver(post_save, sender=User)
-def create_related_models(sender, instance, created, **kwargs):
+def create_or_update_user_extensions(sender, instance, created, **kwargs):
     """
     Hàm này được gọi mỗi khi một đối tượng User được lưu.
-    Nếu là lần tạo mới (created=True), nó sẽ tự động tạo các model liên quan.
+    - Nếu là lần tạo mới (created=True), nó sẽ tạo mới các model liên quan.
+    - Nếu là cập nhật, nó đảm bảo các model liên quan tồn tại (hữu ích cho các user cũ).
     """
     if created:
         UserProfile.objects.create(user=instance)
         UserStats.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def save_related_models(sender, instance, **kwargs):
-    """
-    Hàm này đảm bảo các model liên quan luôn được lưu.
-    Nó đặc biệt hữu ích để tự động tạo profile và stats cho các user cũ 
-    (được tạo trước khi có các model này).
-    """
-    try:
-        instance.userprofile.save()
-        instance.stats.save()
-    except (UserProfile.DoesNotExist, UserStats.DoesNotExist):
-        # Nếu không tìm thấy, hãy tạo mới
+    else:
+        # Dùng get_or_create để đảm bảo các user cũ cũng có profile và stats
+        # một cách an toàn mà không gây lỗi.
         UserProfile.objects.get_or_create(user=instance)
         UserStats.objects.get_or_create(user=instance)
-

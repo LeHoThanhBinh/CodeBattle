@@ -1,13 +1,20 @@
+/**
+ * services/api.js
+ * -----------------------
+ * Hàm tiện ích dùng để gọi API backend Django.
+ * Tự động đính kèm accessToken vào Header và xử lý lỗi 401 (token hết hạn).
+ */
+
 import { getAccessToken, clearTokens } from './storage.js';
 
-// Cấu hình địa chỉ của backend
+// ✅ Cấu hình địa chỉ backend API
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
 /**
- * Hàm chung để gọi API, tự động đính kèm token và xử lý lỗi 401.
- * @param {string} endpoint - Đường dẫn API (ví dụ: '/api/profile/')
- * @param {object} options - Các tùy chọn cho fetch (method, headers, body)
- * @returns {Promise<any>} Dữ liệu trả về từ API
+ * Hàm chung để gọi API có xác thực (Bearer Token)
+ * @param {string} endpoint - Ví dụ: '/api/profile/'
+ * @param {object} options - method, headers, body, ...
+ * @returns {Promise<any>} - Dữ liệu JSON trả về
  */
 export async function apiFetch(endpoint, options = {}) {
     const headers = {
@@ -15,10 +22,9 @@ export async function apiFetch(endpoint, options = {}) {
         ...options.headers,
     };
 
-    // Lấy token từ storage.js
+    // ✅ Lấy token từ storage
     const token = getAccessToken();
     if (token) {
-        // Nếu có token, đính kèm nó vào header Authorization
         headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -30,31 +36,33 @@ export async function apiFetch(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-        // XỬ LÝ LỖI TOKEN HẾT HẠN HOẶC KHÔNG HỢP LỆ
-        // (Không áp dụng cho chính endpoint đăng nhập)
+        // ⚠️ Xử lý token hết hạn / không hợp lệ
         if (response.status === 401 && endpoint !== '/api/token/') {
-            console.error('Unauthorized request. Token might be expired.');
-            // Xóa token cũ và chuyển hướng về trang đăng nhập
+            console.warn('⛔ Token hết hạn hoặc không hợp lệ. Đăng xuất...');
             clearTokens();
-            window.location.href = '/login';
-            // Dừng thực thi để tránh các lỗi không mong muốn
-            return Promise.reject(new Error('Session expired. Please log in again.'));
+
+            // Chuyển về trang login bằng cơ chế SPA (nếu có router)
+            history.pushState(null, null, '/login');
+            window.dispatchEvent(new PopStateEvent('popstate')); // Gọi lại router
+            return Promise.reject(new Error('Phiên đăng nhập đã hết hạn.'));
         }
 
+        // ❌ Nếu response không OK, ném lỗi
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || 'An unknown error occurred');
+            throw new Error(errorData.detail || `API Error (${response.status})`);
         }
 
-        if (response.status === 204) { // No Content
+        // ✅ 204 No Content → trả về null
+        if (response.status === 204) {
             return null;
         }
 
+        // ✅ Trả về dữ liệu JSON
         return response.json();
+
     } catch (error) {
-        console.error(`API fetch error for endpoint ${endpoint}:`, error);
-        // Ném lỗi ra để các hàm gọi nó (ví dụ: trong login.js) có thể bắt và xử lý
-        throw error;
+        console.error(`🔥 Lỗi API tại endpoint ${endpoint}:`, error);
+        throw error; // Cho phép các hàm khác (vd: login.js) xử lý tiếp
     }
 }
-

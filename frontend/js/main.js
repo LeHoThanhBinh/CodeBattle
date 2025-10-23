@@ -8,7 +8,7 @@ import { initDashboardPage } from './pages/dashboard.js';
  */
 const router = async () => {
     const routes = [
-        // ĐÃ SỬA: Mỗi view giờ là một hàm nhận router làm tham số
+        // Mỗi view giờ là một hàm nhận router làm tham số
         // để có thể thực hiện chuyển trang từ bên trong logic của trang đó.
         { path: "/login", view: (router) => initLoginPage(router) },
         { path: "/register", view: (router) => initRegisterPage(router) },
@@ -26,18 +26,20 @@ const router = async () => {
     
     const isAuth = !!sessionStorage.getItem('accessToken');
     
-    // Ngăn người dùng đã đăng nhập vào lại trang login/register
+    // --- BẢO VỆ ROUTE (Route Guarding) ---
+
+    // 1. Ngăn người dùng đã đăng nhập vào lại trang login/register
     const authRoutes = ['/login', '/register'];
     if (authRoutes.includes(currentPath) && isAuth) {
         history.replaceState(null, null, "/dashboard");
         currentPath = "/dashboard"; // Cập nhật lại đường dẫn để xử lý tiếp
     }
     
-    // Bảo vệ các trang yêu cầu đăng nhập
+    // 2. Ngăn người dùng chưa đăng nhập vào các trang cần bảo vệ
     const protectedRoutes = ['/dashboard'];
     if (protectedRoutes.includes(currentPath) && !isAuth) {
         history.replaceState(null, null, "/login");
-        router(); 
+        router(); // Gọi lại router để render trang login
         return; 
     }
 
@@ -56,7 +58,7 @@ const router = async () => {
         });
 
         document.querySelector("#app").innerHTML = html;
-        // ĐÃ SỬA: Truyền chính hàm router vào cho hàm view
+        // Truyền chính hàm router vào cho hàm view để nó có thể sử dụng
         match.view(router);
     } catch (error) {
         console.error("Failed to load page:", error);
@@ -64,19 +66,22 @@ const router = async () => {
     }
 };
 
-// --- Các trình lắng nghe sự kiện (giữ nguyên) ---
+// --- CÁC TRÌNH LẮNG NGHE SỰ KIỆN ---
 
+// Chạy router khi người dùng nhấn nút back/forward của trình duyệt
 window.addEventListener("popstate", router);
 
+// Chạy router khi trang được tải lần đầu tiên
 document.addEventListener("DOMContentLoaded", () => {
+    // Bắt sự kiện click trên các link SPA (có data-link)
     document.body.addEventListener("click", e => {
         const anchor = e.target.closest('a[data-link]');
         if (anchor) {
-            e.preventDefault();
-            history.pushState(null, null, anchor.href);
-            router();
+            e.preventDefault(); // Ngăn trình duyệt tải lại toàn bộ trang
+            history.pushState(null, null, anchor.href); // Thay đổi URL trên thanh địa chỉ
+            router(); // Gọi router để hiển thị trang mới
         }
     });
-    router();
+    router(); // Chạy router lần đầu tiên
 });
 
