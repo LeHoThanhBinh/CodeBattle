@@ -5,14 +5,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import UserProfile, UserStats
 
-# ===================================================================
-# Serializers cho Xác thực (Authentication)
-# ===================================================================
-
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Tùy chỉnh token để thêm thông tin username và quyền admin.
-    """
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
@@ -22,9 +15,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """
-    Serializer cho việc đăng ký người dùng mới.
-    """
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password]
     )
@@ -54,15 +44,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
-# ===================================================================
-# Serializers cho Dữ liệu Trang Dashboard
-# ===================================================================
-
 class UserStatsSerializer(serializers.ModelSerializer):
-    """
-    Serializer cho các thẻ thống kê trên Dashboard.
-    """
-    # Khai báo rõ ràng để serializer nhận diện thuộc tính @property từ model
     win_rate = serializers.IntegerField(read_only=True)
     
     class Meta:
@@ -71,13 +53,7 @@ class UserStatsSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Serializer đa năng: Dùng cho header, danh sách online và bảng xếp hạng.
-    """
-    # Lấy trường 'rating' từ model UserProfile liên quan
     rating = serializers.IntegerField(source='userprofile.rating', read_only=True)
-    
-    # Tạo một trường động để tính toán thứ hạng toàn cầu
     global_rank = serializers.SerializerMethodField()
 
     class Meta:
@@ -91,7 +67,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
         """
         try:
             user_rating = obj.userprofile.rating
-            # Chạy một truy vấn để đếm số profile có rating cao hơn
             higher_rank_count = UserProfile.objects.filter(rating__gt=user_rating).count()
             return higher_rank_count + 1
         except UserProfile.DoesNotExist:
