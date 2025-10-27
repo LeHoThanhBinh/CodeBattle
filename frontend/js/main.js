@@ -2,6 +2,7 @@
 import { initLoginPage } from './pages/login.js';
 import { initRegisterPage } from './pages/register.js';
 import { initDashboardPage } from './pages/dashboard.js';
+import { initAdminDashboardPage } from './pages/admin-dashboard.js'; // <<< BỔ SUNG: Import trang Admin
 
 /**
  * Hàm router chính, quyết định trang nào sẽ được hiển thị.
@@ -13,6 +14,7 @@ const router = async () => {
         { path: "/login", view: (router) => initLoginPage(router) },
         { path: "/register", view: (router) => initRegisterPage(router) },
         { path: "/dashboard", view: (router) => initDashboardPage(router) },
+        { path: "/admin-dashboard", view: (router) => initAdminDashboardPage(router) }, // <<< BỔ SUNG: Route cho Admin
     ];
 
     let currentPath = location.pathname;
@@ -36,8 +38,10 @@ const router = async () => {
     }
     
     // 2. Ngăn người dùng chưa đăng nhập vào các trang cần bảo vệ
-    const protectedRoutes = ['/dashboard'];
+    // <<< BỔ SUNG: Thêm '/admin-dashboard' vào danh sách cần bảo vệ
+    const protectedRoutes = ['/dashboard', '/admin-dashboard'];
     if (protectedRoutes.includes(currentPath) && !isAuth) {
+        console.warn("Access to protected route denied. Redirecting to login.");
         history.replaceState(null, null, "/login");
         router(); // Gọi lại router để render trang login
         return; 

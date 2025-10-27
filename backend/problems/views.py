@@ -1,42 +1,69 @@
+from .models import Problem
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .models import Problem
 from .serializers import ProblemSerializer
 
 class ProblemListCreateView(generics.ListCreateAPIView):
-    """
-    API endpoint để:
-    - GET: Lấy danh sách tất cả các bài toán (dành cho người dùng đã đăng nhập).
-    - POST: Tạo một bài toán mới (chỉ dành cho admin).
-    """
     queryset = Problem.objects.all()
     serializer_class = ProblemSerializer
 
     def get_permissions(self):
-        """
-        Ghi đè phương thức này để áp dụng quyền khác nhau cho GET và POST.
-        """
         if self.request.method == 'POST':
-            # Chỉ admin mới có quyền tạo bài toán
             return [IsAdminUser()]
-        # Bất kỳ người dùng nào đã đăng nhập cũng có thể xem danh sách
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
-        """
-        Tự động gán người tạo bài toán là user đang gửi request.
-        """
         serializer.save(created_by=self.request.user)
 
 class ProblemDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    API endpoint để:
-    - GET: Lấy chi tiết một bài toán.
-    - PUT/PATCH: Cập nhật một bài toán.
-    - DELETE: Xóa một bài toán.
-    (Tất cả các hành động này chỉ dành cho admin).
-    """
     queryset = Problem.objects.all()
     serializer_class = ProblemSerializer
-    permission_classes = [IsAdminUser] # Chỉ admin mới có quyền sửa/xóa
-    lookup_field = 'pk' # Tìm bài toán dựa trên Primary Key (ID)
+    permission_classes = [IsAdminUser] 
+    lookup_field = 'pk'
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_get_problems(request):
+    try:
+        problems = Problem.objects.all()
+        data = []
+        for problem in problems:
+            data.append({
+                'id': problem.id, 
+                'name': problem.title, 
+                'level': problem.difficulty, 
+                'question_count': 1, 
+                'is_active': problem.is_active
+            })
+        return Response(data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def admin_delete_problem(request, problem_id):
+    try:
+        problem = Problem.objects.get(id=problem_id)
+        problem.delete()
+        return Response({'message': 'Bộ đề đã được xóa'}, status=status.HTTP_200_OK)
+    except Problem.DoesNotExist:
+        return Response({'error': 'Không tìm thấy bộ đề'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PATCH'])
+@permission_classes([IsAdminUser])
+def admin_update_problem_status(request, problem_id):
+    try:
+        problem = Problem.objects.get(id=problem_id)
+        is_active = request.data.get('is_active')
+        problem.is_active = is_active 
+        problem.save()
+        return Response({'message': 'Cập nhật thành công'}, status=status.HTTP_200_OK)
+    except Problem.DoesNotExist:
+        return Response({'error': 'Không tìm thấy bộ đề'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

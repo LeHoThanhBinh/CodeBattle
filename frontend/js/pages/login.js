@@ -16,7 +16,7 @@ function handleSuccessfulLogin(responseData, router) {
         const isAdmin = decodedToken.is_admin || false;
 
         // Chuyển hướng bằng router để tránh tải lại toàn bộ trang
-        const path = isAdmin ? '/admin/dashboard' : '/dashboard';
+        const path = isAdmin ? '/admin-dashboard' : '/dashboard';
         history.pushState(null, null, path); // Cập nhật URL trên thanh địa chỉ
         router(); // Gọi router để render trang mới
 
