@@ -18,10 +18,6 @@ from .serializers import (
     UserStatsSerializer
 )
 
-from django.db import OperationalError
-import logging
-logger = logging.getLogger(__name__)
-
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
@@ -51,12 +47,11 @@ class OnlinePlayersView(generics.ListAPIView):
     def get_queryset(self):
         search_term = self.request.query_params.get('search', None)
         queryset = User.objects.select_related('userprofile').filter(
-            userprofile__is_online=True
+            userprofile__is_online=True,
+            is_staff=False
         ).exclude(id=self.request.user.id)
-
         if search_term:
             queryset = queryset.filter(username__icontains=search_term)
-            
         return queryset
 
 class LeaderboardView(generics.ListAPIView):
@@ -64,32 +59,26 @@ class LeaderboardView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return User.objects.select_related('userprofile').order_by('-userprofile__rating')[:5]
+        return User.objects.select_related('userprofile').filter(is_staff = False).order_by('-userprofile__rating')[:5]
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_get_stats(request):
     try:
         total_users = User.objects.count()
-        active_users = User.objects.filter(is_active=True).count() 
+        active_users = UserProfile.objects.filter(is_online=True).count() 
+        
         total_exams = Problem.objects.count()
         matches_today = Match.objects.filter(start_time__date=date.today()).count()
 
         stats = {
             'total_users': total_users,
-            'active_users': active_users,
+            'active_users': active_users, 
             'total_exams': total_exams,
             'matches_today': matches_today 
         }
         return Response(stats, status=status.HTTP_200_OK)
-    except OperationalError as e:
-        logger.exception("Database OperationalError in admin_get_stats")
-        return Response(
-            {'error': 'Database error (table missing or not migrated)', 'details': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
     except Exception as e:
-        logger.exception("Unexpected error in admin_get_stats")
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
@@ -99,17 +88,29 @@ def admin_get_users(request):
         users = User.objects.all().select_related('userprofile') 
         data = []
         for user in users:
-            user_status = 'Active' if user.is_active else 'Locked'
+            user_status = 'Active' if user.userprofile.is_online else 'Locked'
+            
             data.append({
                 'id': user.id,
                 'name': user.username, 
                 'email': user.email,
-                'status': user_status
+                'status': user_status 
             })
         return Response(data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) 
+def logout_user(request):
+    try:
+        user = request.user
+        user.userprofile.is_online = False
+        user.userprofile.save()
+        return Response({"message": "Đăng xuất thành công, is_online=False"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+     
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def admin_delete_user(request, user_id):

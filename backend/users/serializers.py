@@ -9,10 +9,21 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # Thêm các trường tùy chỉnh vào payload của token
         token['username'] = user.username
         token['is_admin'] = user.is_staff or user.is_superuser
         return token
+    
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        try:
+            profile = self.user.userprofile
+            profile.is_online = True
+            profile.save()
+        except UserProfile.DoesNotExist:
+            UserProfile.objects.create(user=self.user, is_online=True)
+        except Exception as e:
+            print(f"Lỗi khi cập nhật trạng thái online: {e}")
+        return data
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -25,10 +36,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'password', 'password2')
 
     def validate(self, attrs):
-        # Kiểm tra mật khẩu có khớp không
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Mật khẩu không khớp."})
-        # Kiểm tra email hoặc username đã tồn tại chưa
         if User.objects.filter(email=attrs['email']).exists():
             raise serializers.ValidationError({"email": "Email này đã được sử dụng."})
         if User.objects.filter(username=attrs['username']).exists():
@@ -36,7 +45,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        # Tạo người dùng mới bằng create_user để hash mật khẩu đúng cách
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
