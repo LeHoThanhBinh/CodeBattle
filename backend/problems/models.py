@@ -17,6 +17,9 @@ class Problem(models.Model):
     memory_limit = models.IntegerField(default=256, help_text="in MB")
     
     is_active = models.BooleanField(default=True)
+    
+    
+    
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User, 
@@ -29,6 +32,7 @@ class Problem(models.Model):
         return self.title
 
 class TestCase(models.Model):
+    # ... (phần còn lại của file giữ nguyên) ...
     problem = models.ForeignKey(
         Problem, 
         on_delete=models.CASCADE, 
