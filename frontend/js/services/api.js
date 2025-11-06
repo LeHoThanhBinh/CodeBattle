@@ -1,13 +1,5 @@
-/**
- * services/api.js
- * -----------------------
- * Hàm tiện ích dùng để gọi API backend Django.
- * Tự động đính kèm accessToken vào Header và xử lý lỗi 401 (token hết hạn).
- */
-
 import { getAccessToken, clearTokens } from './storage.js';
 
-// ✅ Cấu hình địa chỉ backend API
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
 /**
@@ -21,48 +13,54 @@ export async function apiFetch(endpoint, options = {}) {
         'Content-Type': 'application/json',
         ...options.headers,
     };
-
-    // ✅ Lấy token từ storage
     const token = getAccessToken();
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-
     const config = {
         ...options,
         headers,
     };
-
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-        // ⚠️ Xử lý token hết hạn / không hợp lệ
+        const text = await response.text();
+        let parsed = null;
+        try {
+            parsed = text ? JSON.parse(text) : null;
+        } catch (e) {
+            parsed = text;
+        }
+        
         if (response.status === 401 && endpoint !== '/api/token/') {
-            console.warn('⛔ Token hết hạn hoặc không hợp lệ. Đăng xuất...');
+            console.warn('không hợp lệ. Đăng xuất.');
             clearTokens();
-
-            // Chuyển về trang login bằng cơ chế SPA (nếu có router)
             history.pushState(null, null, '/login');
-            window.dispatchEvent(new PopStateEvent('popstate')); // Gọi lại router
+            window.dispatchEvent(new PopStateEvent('popstate')); 
             return Promise.reject(new Error('Phiên đăng nhập đã hết hạn.'));
         }
-
-        // ❌ Nếu response không OK, ném lỗi
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || `API Error (${response.status})`);
+            const errMsg =
+                (parsed && (parsed.detail || parsed.message || parsed.error)) ||
+                (typeof parsed === 'string' && parsed) ||
+                `API Error (${response.status})`;
+
+            console.error('API Error:', {
+                endpoint,
+                status: response.status,
+                body: parsed
+            });
+
+            const err = new Error(errMsg);
+            err.status = response.status;
+            err.body = parsed;
+            throw err;
         }
-
-        // ✅ 204 No Content → trả về null
-        if (response.status === 204) {
-            return null;
-        }
-
-        // ✅ Trả về dữ liệu JSON
-        return response.json();
-
+        if (response.status === 204) return null;
+        
+        return parsed;
     } catch (error) {
-        console.error(`🔥 Lỗi API tại endpoint ${endpoint}:`, error);
-        throw error; // Cho phép các hàm khác (vd: login.js) xử lý tiếp
+        console.error(`Lỗi API ${endpoint}:`, error);
+        throw error;
     }
 }

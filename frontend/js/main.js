@@ -1,25 +1,20 @@
-// Import các hàm khởi tạo cho từng trang
 import { initLoginPage } from './pages/login.js';
 import { initRegisterPage } from './pages/register.js';
 import { initDashboardPage } from './pages/dashboard.js';
 import { initAdminDashboardPage } from './pages/admin-dashboard.js';
-import { initBattleRoomPage } from './pages/battle-room.js';
+import { initBattleRoomPage } from './pages/battle-room.js'; // <- Đã gộp
 
-/**
- * Hàm router chính, quyết định trang nào sẽ được hiển thị.
- */
 const router = async () => {
     const routes = [
         { path: "/login", view: (router) => initLoginPage(router) },
         { path: "/register", view: (router) => initRegisterPage(router) },
         { path: "/dashboard", view: (router) => initDashboardPage(router) },
         { path: "/admin-dashboard", view: (router) => initAdminDashboardPage(router) },
-        { path: "/battle-room", view: (router) => initBattleRoomPage(router) },
+        { path: "/battle-room", view: (router) => initBattleRoomPage(router) }, // <- Đã gộp
     ];
 
     let currentPath = location.pathname;
 
-    // Xử lý khi người dùng truy cập trang gốc (/, /index.html)
     if (currentPath === "/" || currentPath === "/index.html") {
         const defaultPath = sessionStorage.getItem('accessToken') ? "/dashboard" : "/login";
         history.replaceState(null, null, defaultPath);
@@ -28,9 +23,6 @@ const router = async () => {
     
     const isAuth = !!sessionStorage.getItem('accessToken');
     
-    // --- BẢO VỆ ROUTE (Route Guarding) ---
-
-    // 1. Ngăn người dùng đã đăng nhập vào lại trang login/register
     const authRoutes = ['/login', '/register'];
     if (authRoutes.includes(currentPath) && isAuth) {
         history.replaceState(null, null, "/dashboard");
@@ -38,7 +30,8 @@ const router = async () => {
     }
     
     // 2. Ngăn người dùng chưa đăng nhập vào các trang cần bảo vệ
-    const protectedRoutes = ['/dashboard', '/admin-dashboard', '/battle-room'];
+    // <- Đã gộp, thêm '/battle-room'
+    const protectedRoutes = ['/dashboard', '/admin-dashboard', '/battle-room']; 
     if (protectedRoutes.includes(currentPath) && !isAuth) {
         console.warn("Access to protected route denied. Redirecting to login.");
         history.replaceState(null, null, "/login");
@@ -47,13 +40,10 @@ const router = async () => {
     }
 
     const match = routes.find(route => route.path === currentPath);
-
-    // Nếu không tìm thấy route nào (ví dụ: /abc), hiển thị trang 404
     if (!match) {
         document.querySelector("#app").innerHTML = "<h1>404 Not Found</h1><p>Page not found.</p>";
         return;
     }
-    
     try {
         // Tải file HTML tương ứng với đường dẫn (ví dụ: /html/dashboard.html)
         const html = await fetch(`/html${match.path}.html`).then(data => {
@@ -62,7 +52,7 @@ const router = async () => {
         });
 
         document.querySelector("#app").innerHTML = html;
-        // Chạy logic JavaScript cho trang vừa tải
+        // Chạy logic JavaScript cho trang vừa tải (<- Đã gộp, giữ lại comment)
         match.view(router);
     } catch (error) {
         console.error("Failed to load page:", error);
@@ -70,14 +60,8 @@ const router = async () => {
     }
 };
 
-// --- CÁC TRÌNH LẮNG NGHE SỰ KIỆN ---
-
-// Chạy router khi người dùng nhấn nút back/forward của trình duyệt
 window.addEventListener("popstate", router);
-
-// Chạy router khi trang được tải lần đầu tiên
 document.addEventListener("DOMContentLoaded", () => {
-    // Bắt sự kiện click trên các link SPA (có data-link)
     document.body.addEventListener("click", e => {
         const anchor = e.target.closest('a[data-link]');
         if (anchor) {
@@ -86,5 +70,5 @@ document.addEventListener("DOMContentLoaded", () => {
             router(); 
         }
     });
-    router(); // Chạy router lần đầu tiên
+    router(); // Chạy router lần đầu tiên (<- Đã gộp)
 });

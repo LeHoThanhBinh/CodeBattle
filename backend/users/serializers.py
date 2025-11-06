@@ -1,10 +1,17 @@
+import logging # Thêm logging
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, UserStats
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+# Thêm import cho validate_password
 from django.contrib.auth.password_validation import validate_password
+from .models import UserProfile, UserStats, UserActivityLog # Thêm UserActivityLog
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-# --- Các Serializer cho Đăng nhập và Đăng ký (Giữ nguyên) ---
+# Khởi tạo logger
+logger = logging.getLogger(__name__)
+
+# ===================================================================
+# Serializers cho Xác thực (Authentication)
+# ===================================================================
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -13,6 +20,27 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['is_admin'] = user.is_staff or user.is_superuser
         return token
+    
+    def validate(self, attrs):
+        
+        data = super().validate(attrs)
+        try:
+            # Lấy profile hoặc tạo mới nếu chưa có
+            profile, created = UserProfile.objects.get_or_create(user=self.user)
+            
+            # Cập nhật trạng thái online
+            if not profile.is_online:
+                profile.is_online = True
+                profile.save(update_fields=['is_online'])
+            
+            # Ghi log (luôn luôn)
+            UserActivityLog.objects.create(user=self.user, activity_type='login')
+            
+        except Exception as e:
+            # Ghi log lỗi thay vì print
+            logger.error(f"Lỗi khi cập nhật trạng thái/ghi log (user: {self.user.username}): {e}")
+            
+        return data
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -27,11 +55,15 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
+            raise serializers.ValidationError({"password": "Mật khẩu không khớp."})
+        
+        # NOTE: Việc kiểm tra 2 query riêng biệt như này là TỐT cho UX
+        # vì nó báo lỗi chính xác field nào bị trùng.
         if User.objects.filter(email=attrs['email']).exists():
-            raise serializers.ValidationError({"email": "An account with this email already exists."})
+            raise serializers.ValidationError({"email": "Email này đã được sử dụng."})
         if User.objects.filter(username=attrs['username']).exists():
-            raise serializers.ValidationError({"username": "An account with this username already exists."})
+            raise serializers.ValidationError({"username": "Username này đã được sử dụng."})
+        
         return attrs
 
     def create(self, validated_data):
@@ -42,8 +74,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         return user
 
+# ===================================================================
+# Serializers cho Dữ liệu User (Profile & Stats)
+# ===================================================================
+
 class UserStatsSerializer(serializers.ModelSerializer):
-    # Thêm trường win_rate (là một @property trong model)
+    
     win_rate = serializers.IntegerField(read_only=True)
     global_rank = serializers.SerializerMethodField()
 
@@ -52,46 +88,54 @@ class UserStatsSerializer(serializers.ModelSerializer):
         fields = ('total_battles', 'win_rate', 'current_streak', 'global_rank')
 
     def get_global_rank(self, obj):
-        """
-        Tính toán thứ hạng của người dùng dựa trên ELO.
-        Đếm số người dùng có rating cao hơn người dùng hiện tại và cộng thêm 1.
-        """
+        
         try:
+            # obj ở đây là 1 instance UserStats
             user_rating = obj.user.userprofile.rating
+            if user_rating is None:
+                return None
             higher_rank_count = UserProfile.objects.filter(rating__gt=user_rating).count()
             return higher_rank_count + 1
-        except UserProfile.DoesNotExist:
+        except (UserProfile.DoesNotExist, AttributeError):
             return None
 
-# --- UserProfileSerializer (ĐÃ CẬP NHẬT) ---
 class UserProfileSerializer(serializers.ModelSerializer):
-    rating = serializers.IntegerField(source='userprofile.rating', read_only=True)
+    
+    # source='userprofile.rating' sẽ tự động join User -> UserProfile
+    # (cần .select_related('userprofile') trong ViewSet để tối ưu)
+    rating = serializers.IntegerField(source='userprofile.rating', read_only=True, default=0)
     global_rank = serializers.SerializerMethodField()
-    rank = serializers.SerializerMethodField() # <<< TRƯỜNG MỚI: Thêm rank
+    rank = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'rating', 'global_rank', 'rank') # <<< CẬP NHẬT: Thêm 'rank' vào fields
+        fields = ('id', 'username', 'rating', 'global_rank', 'rank')
 
     def get_global_rank(self, obj):
+        
         try:
+            # obj ở đây là 1 instance User
             user_rating = obj.userprofile.rating
+            if user_rating is None:
+                return None
             higher_rank_count = UserProfile.objects.filter(rating__gt=user_rating).count()
             return higher_rank_count + 1
-        except UserProfile.DoesNotExist:
+        except (UserProfile.DoesNotExist, AttributeError):
             return None
     
-    # --- HÀM MỚI: Định nghĩa logic cho rank ---
     def get_rank(self, obj):
+        
         try:
-            rating = obj.userprofile.rating
-            if rating <= 1000:
-                return "Bronze"
-            elif rating <= 2000:
-                return "Silver"
-            else:  # Khoảng 2001-2999
-                return "Gold" # (Giả định, vì bạn bỏ trống khoảng này)
-            
-        except UserProfile.DoesNotExist:
-            return "Bronze" # Mặc định là Đồng
-
+            # obj ở đây là 1 instance User
+            rating = obj.userprofile.rating or 0 # An toàn hơn nếu rating là None
+        except (UserProfile.DoesNotExist, AttributeError):
+            rating = 0 # Mặc định là 0 nếu chưa có profile
+        
+        if rating <= 1000:
+            return "Bronze"
+        elif rating <= 2000:
+            return "Silver"
+        elif rating <= 3000: # Thêm khoảng 2001-3000
+            return "Gold"
+        else: # Trên 3000
+            return "Platinum" # (Ví dụ)

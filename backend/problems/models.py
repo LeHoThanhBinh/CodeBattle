@@ -2,9 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Problem(models.Model):
-    """
-    Model đại diện cho một bài toán trong ngân hàng đề.
-    """
     class Difficulty(models.IntegerChoices):
         EASY = 1, 'Easy'
         MEDIUM = 2, 'Medium'
@@ -19,6 +16,7 @@ class Problem(models.Model):
     time_limit = models.IntegerField(default=1000, help_text="in milliseconds")
     memory_limit = models.IntegerField(default=256, help_text="in MB")
     
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User, 
@@ -31,9 +29,6 @@ class Problem(models.Model):
         return self.title
 
 class TestCase(models.Model):
-    """
-    Model đại diện cho một test case của một bài toán.
-    """
     problem = models.ForeignKey(
         Problem, 
         on_delete=models.CASCADE, 
@@ -45,6 +40,5 @@ class TestCase(models.Model):
         default=True, 
         help_text="Hidden test cases are not shown to the user."
     )
-
     def __str__(self):
         return f"Test Case {self.id} for Problem '{self.problem.title}'"
