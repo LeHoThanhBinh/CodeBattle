@@ -191,18 +191,124 @@ tbody tr:nth-child(even) {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-/* Reports */
-.report-cards {
-    display: flex;
-    gap: 20px;
-}
-
-.report-card {
-    background: #fff;
-    flex: 1;
+.chart-container-wrapper {
+    background: #fff; 
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-top: 30px;
+}
+.chart-title {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #333;
+}
+.chart-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 250px;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+.chart-bar {
+    width: 10%;
+    background-color: #6c63ff; 
+    border-radius: 6px 6px 0 0;
+    transition: 0.3s ease;
+    position: relative; 
+    opacity: 0.8;
+}
+.chart-bar:hover {
+    opacity: 1;
+}
+
+.chart-bar .tooltip {
+    visibility: hidden;
+    position: absolute;
+    top: -35px; 
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.chart-bar:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.report-filters {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap; 
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+.report-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+    margin-top: auto; 
+}
+
+.report-btn.primary {
+    background-color: #6c63ff; 
+    color: #fff;
+}
+.report-btn.primary:hover {
+    background-color: #5048c4;
+}
+
+.report-btn.secondary {
+    background-color: #e9ecef; 
+    color: #333;
+}
+.report-btn.secondary:hover {
+    background-color: #d1d5db;
+}
+
+.table-title {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    font-weight: 600;
+    padding-left: 5px;
 }
 
 /* Filter */

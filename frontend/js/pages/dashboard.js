@@ -9,7 +9,6 @@ import { apiFetch } from '../services/api.js';
 
 export async function initDashboardPage(router) {
     console.log("Dashboard page initialized");
-
     try {
         const [profile, stats, players, leaderboard] = await Promise.all([
             getUserProfile(), 
@@ -17,14 +16,12 @@ export async function initDashboardPage(router) {
             apiFetch('/api/online-players/'),
             apiFetch('/api/leaderboard/')
         ]);
-
+        
         updateHeader(profile);
         updateStats(stats, profile);
         renderOnlinePlayers(players);
         renderLeaderboard(leaderboard, profile.id);
-
         setupEventListeners(profile, router);
-
     } catch (error) {
         console.error("Failed to load dashboard data:", error);
     }

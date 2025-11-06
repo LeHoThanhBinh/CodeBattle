@@ -92,46 +92,100 @@
         </section>
 
         <section id="monitor" class="section">
-            <h2 class="section-title">Giám sát Hệ thống</h2>
-            <div class="monitor-grid">
-                <div class="monitor-card card">
-                    <p>CPU Usage: <b>32%</b></p>
+            <h2 class="section-title">Giám sát Hoạt động Hệ thống</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="monitorUptimeStat">...</h3>
+                    <p>Uptime Hệ thống</p>
                 </div>
-                <div class="monitor-card card">
-                    <p>Memory Usage: <b>68%</b></p>
+                <div class="stat-card">
+                    <h3 id="monitorOnlineUsersStat">...</h3>
+                    <p>Người dùng online</p>
                 </div>
-                <div class="monitor-card card">
-                    <p>Database Connections: <b>10/50</b></p>
+                <div class="stat-card">
+                    <h3 id="monitorMatchesInProgressStat">...</h3>
+                    <p>Trận đấu Đang diễn ra</p>
                 </div>
+                <div class="stat-card">
+                    <h3 id="monitorAvgLatencyStat">...</h3>
+                    <p>Độ trễ Trung bình</p>
+                </div>
+            </div>
+
+            <div class="chart-container-wrapper">
+                <h3 class="chart-title">Số trận đấu (24h qua)</h3>
+                <div class="chart-container" id="activityChart">
+                    <canvas id="userActivityChartCanvas"></canvas>
+                </div>
+            </div>
+
+            <h2 class="section-title" style="margin-top: 30px;">Nhật ký Hoạt động</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Người dùng</th>
+                            <th>Tên bộ đề</th>
+                            <th>Cấp độ</th>
+                            <th>Số câu hỏi</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityLogTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 1rem;">Đang tải nhật ký...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </section>
 
         <section id="reports" class="section">
             <h2 class="section-title">Báo cáo & Thống kê</h2>
-            <div class="report-cards">
-                <div class="report-card card">
-                    <p>Người dùng mới trong tháng: <b>15</b></p>
+            <div class="report-filters card">
+                <div class="filter-group">
+                    <label for="reportType">Loại báo cáo</label>
+                    <select id="reportType">
+                        <option value="user_activity">Thống kê sử dụng nền tảng</option>
+                        <option value="exam_performance">Hiệu suất bộ đề</option>
+                    </select>
                 </div>
-                <div class="report-card card">
-                    <p>Số đề thi được tạo: <b>8</b></p>
+                <div class="filter-group">
+                    <label for="timeRange">Khoảng thời gian</label>
+                    <select id="timeRange">
+                        <option value="7d">7 ngày qua</option>
+                        <option value="30d">30 ngày qua</option>
+                        <option value="all">Toàn bộ thời gian</option>
+                    </select>
                 </div>
-                <div class="report-card card">
-                    <p>Lượt làm bài trung bình: <b>120</b></p>
+                <button id="generateReportBtn" class="report-btn primary">Tạo Báo cáo</button>
+                <button id="exportExcelBtn" class="report-btn secondary">Xuất Excel</button>
+            </div>
+        
+            <div class="chart-container-wrapper">
+                <h3 class="chart-title">Xu hướng Người dùng Hoạt động</h3>
+                <div class="chart-container">
+                    <canvas id="reportsActivityChartCanvas"></canvas>
                 </div>
             </div>
+        
+            <div class="table-container">
+                 <h3 class="table-title">Top 10 Người chơi Xuất sắc</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hạng</th>
+                            <th>Tên người chơi</th>
+                            <th>Điểm số (ELO)</th>
+                            <th>Số trận thắng</th>
+                            <th>Tỷ lệ thắng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topPlayersTableBody">
+                        <tr><td colspan="5" style="text-align: center; padding: 1rem;">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
-    </main>
-
-    <div id="createModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <span class="close-modal-btn">&times;</span>
-            <h2>Tạo Bộ đề</h2>
-        </div>
-    </div>
-    <div id="importModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <span class="close-modal-btn">&times;</span>
-            <h2>Import Bộ đề</h2>
-        </div>
-    </div>
-</div>

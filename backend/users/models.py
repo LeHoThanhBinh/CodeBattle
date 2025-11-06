@@ -28,6 +28,14 @@ class UserStats(models.Model):
         return round((self.wins / self.total_battles) * 100)
     def __str__(self):
         return f"Stats for {self.user.username}"
+    
+class UserActivityLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
+    activity_type = models.CharField(max_length=50, default='login')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.activity_type} - {self.timestamp}"
 
 @receiver(post_save, sender=User)
 def create_or_update_user_extensions(sender, instance, created, **kwargs):

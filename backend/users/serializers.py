@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import UserProfile, UserStats
+from .models import UserProfile, UserStats, UserActivityLog
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -19,10 +19,12 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             profile = self.user.userprofile
             profile.is_online = True
             profile.save()
+            UserActivityLog.objects.create(user=self.user, activity_type='login')
         except UserProfile.DoesNotExist:
             UserProfile.objects.create(user=self.user, is_online=True)
+            UserActivityLog.objects.create(user=self.user, activity_type='login')
         except Exception as e:
-            print(f"Lỗi khi cập nhật trạng thái online: {e}")
+            print(f"Lỗi khi cập nhật trạng thái online hoặc ghi log: {e}")
         return data
 
 class RegisterSerializer(serializers.ModelSerializer):
