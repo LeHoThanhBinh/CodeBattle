@@ -1,0 +1,122 @@
+[
+  {
+    "model": "problems.testcase",
+    "pk": 1,
+    "fields": {
+      "problem": 1,
+      "input_data": "1 2",
+      "expected_output": "3",
+      "is_hidden": false
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 2,
+    "fields": {
+      "problem": 1,
+      "input_data": "-5 5",
+      "expected_output": "0",
+      "is_hidden": false
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 3,
+    "fields": {
+      "problem": 1,
+      "input_data": "100 200",
+      "expected_output": "300",
+      "is_hidden": true
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 4,
+    "fields": {
+      "problem": 1,
+      "input_data": "-10 -20",
+      "expected_output": "-30",
+      "is_hidden": true
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 5,
+    "fields": {
+      "problem": 2,
+      "input_data": "hello",
+      "expected_output": "olleh",
+      "is_hidden": false
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 6,
+    "fields": {
+      "problem": 2,
+      "input_data": "abcde",
+      "expected_output": "edcba",
+      "is_hidden": false
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 7,
+    "fields": {
+      "problem": 2,
+      "input_data": "12345",
+      "expected_output": "54321",
+      "is_hidden": true
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 8,
+    "fields": {
+      "problem": 2,
+      "input_data": "racecar",
+      "expected_output": "racecar",
+      "is_hidden": true
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 9,
+    "fields": {
+      "problem": 3,
+      "input_data": "1 2 3 4 5",
+      "expected_output": "5",
+      "is_hidden": false
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 10,
+    "fields": {
+      "problem": 3,
+      "input_data": "-1 -5 -3 -10",
+      "expected_output": "-1",
+      "is_hidden": false
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 11,
+    "fields": {
+      "problem": 3,
+      "input_data": "10 20 30 25",
+      "expected_output": "30",
+      "is_hidden": true
+    }
+  },
+  {
+    "model": "problems.testcase",
+    "pk": 12,
+    "fields": {
+      "problem": 3,
+      "input_data": "100 99 101 50",
+      "expected_output": "101",
+      "is_hidden": true
+    }
+  }
+]

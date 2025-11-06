@@ -11,7 +11,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     
     # Các trường thông tin bổ sung
-    rating = models.IntegerField(default=1200)
+    rating = models.IntegerField(default=0)
     avatar = models.URLField(max_length=255, blank=True, null=True)
     biography = models.TextField(blank=True, null=True)
     is_online = models.BooleanField(default=False)

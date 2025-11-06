@@ -7,7 +7,8 @@ from .views import (
     UserProfileView,
     UserStatsView,
     OnlinePlayersView,
-    LeaderboardView
+    LeaderboardView,
+    PlayerStatsView
 )
 
 urlpatterns = [
@@ -37,4 +38,5 @@ urlpatterns = [
     # URL để lấy bảng xếp hạng top 5
     # Frontend sẽ gọi: /api/leaderboard/
     path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
+    path('stats/<int:user_id>/', PlayerStatsView.as_view(), name='player-stats'),
 ]

@@ -1,0 +1,211 @@
+services:
+  # -------------------------------------
+  #  🗄 Dịch vụ Database (MySQL)
+  # -------------------------------------
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Ho_Chi_Minh
+      LANG: en_US.UTF-8
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u${DB_USER} -p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  🔁 Redis (Hàng đợi Celery)
+  # -------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  🧠 Backend (Django + Daphne)
+  # -------------------------------------
+  backend:
+    build:
+      context: ./backend
+    working_dir: /app
+    command: daphne -b 0.0.0.0 -p 8000 code_battle_api.asgi:application
+    restart: always
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  ⚙️ Celery Worker (Máy chấm nội bộ)
+  # -------------------------------------
+  worker:
+    build:
+      context: ./backend
+    working_dir: /app
+    command: celery -A code_battle_api worker --loglevel=info
+    restart: always
+    volumes:
+      - ./backend:/app
+      # Nếu worker của BẠN cần dùng Docker, hãy giữ dòng này.
+      # Nếu không, hãy xóa nó để tăng bảo mật.
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  🖥️ Frontend (React/Vite Dev)
+  # -------------------------------------
+  frontend:
+    image: node:18-alpine
+    # Giả định code frontend nằm trong thư mục ./frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      # Dùng volume để cache node_modules, giúp 'npm install' nhanh hơn
+      - frontend_node_modules:/app/node_modules
+    # Giả định port 5173 (Vite)
+    ports:
+      - "5173:5173"
+    # Lệnh để cài đặt và chạy dev server
+    # Cần '--host 0.0.0.0' để expose ra ngoài container
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    networks:
+      - codebattle_net
+    depends_on:
+      - backend
+
+  # -------------------------------------
+  #  🧩 Judge0 Database (PostgreSQL)
+  # -------------------------------------
+  judge0_db:
+    image: postgres:13-alpine
+    restart: always
+    environment:
+      # Sử dụng biến từ file .env
+      POSTGRES_USER: ${JUDGE0_DB_USER}
+      POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
+      POSTGRES_DB: ${JUDGE0_DB_NAME}
+    volumes:
+      - judge0_postgres_data:/var/lib/postgresql/data
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  📦 Judge0 Redis
+  # -------------------------------------
+  judge0_redis:
+    image: redis:7.2.0-alpine
+    # Sử dụng biến từ file .env
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${JUDGE0_REDIS_PASS}"]
+    restart: always
+    volumes:
+      - judge0_redis_data:/data
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  ⚖️ Judge0 API Server (Build từ source)
+  # -------------------------------------
+  judge0_server:
+    build:
+      context: ./judge0
+      dockerfile: Dockerfile
+    container_name: codebattle-judge0_server
+    privileged: true # CẦN THIẾT để chạy sandbox 'isolate'
+    restart: always
+    environment:
+      - PORT=2358
+      - REDIS_HOST=judge0_redis
+      - REDIS_PASSWORD=${JUDGE0_REDIS_PASS} # Thêm mật khẩu Redis
+      # Sửa DATABASE_URL để khớp với credentials của judge0_db
+      - DATABASE_URL=postgresql://${JUDGE0_DB_USER}:${JUDGE0_DB_PASS}@judge0_db:5432/${JUDGE0_DB_NAME}
+      - RAILS_ENV=production
+      - DISABLE_ISOLATE_CGROUPS=true # Thêm cờ fix cgroup v2
+      # ĐÃ XÓA 'ENABLE_SANDBOX=false' -> MẶC ĐỊNH SẼ LÀ TRUE (AN TOÀN)
+    ports:
+      - "2358:2358"
+    depends_on:
+      - judge0_db
+      - judge0_redis
+    networks:
+      - codebattle_net
+
+  # -------------------------------------
+  #  ⚖️ Judge0 Worker (Build từ source)
+  # -------------------------------------
+  judge0_worker:
+    build:
+      context: ./judge0
+      dockerfile: Dockerfile
+    container_name: codebattle-judge0_worker
+    privileged: true # CẦN THIẾT để chạy sandbox 'isolate'
+    restart: always
+    environment:
+      - WORKER=true
+      - REDIS_HOST=judge0_redis
+      - REDIS_PASSWORD=${JUDGE0_REDIS_PASS} # Thêm mật khẩu Redis
+      # Sửa DATABASE_URL để khớp với credentials của judge0_db
+      - DATABASE_URL=postgresql://${JUDGE0_DB_USER}:${JUDGE0_DB_PASS}@judge0_db:5432/${JUDGE0_DB_NAME}
+      - RAILS_ENV=production
+      - DISABLE_ISOLATE_CGROUPS=true # Thêm cờ fix cgroup v2
+    depends_on:
+      - judge0_server # Worker nên khởi động sau server
+    networks:
+      - codebattle_net
+
+# =====================================
+# 📦 Dữ liệu lưu trữ & mạng nội bộ
+# =====================================
+volumes:
+  db_data:
+  redis_data:
+  judge0_postgres_data:
+  judge0_redis_data:
+  frontend_node_modules: # <-- Đã thêm volume cho frontend
+
+networks:
+  codebattle_net:
+    driver: bridge
+    name: codebattle_network
+

@@ -1,71 +1,64 @@
-<!-- Màn hình chờ đối thủ chấp nhận -->
-<div id="waiting-overlay" class="waiting-container">
-    <h2>Chờ người chơi còn lại...</h2>
-    <p>Trận đấu sẽ bắt đầu ngay khi đối thủ của bạn chấp nhận.</p>
-    <div class="spinner"></div> 
-</div>
-
-<!-- Nội dung phòng đấu chính, được ẩn theo mặc định -->
 <div class="battle-room" id="battle-room-main" style="display: none;">
-    <!-- Cột trái: Chi tiết bài toán & Kết quả nộp bài -->
-    <div class="panel result-panel">
-        <div id="problem-details">
-            <h2 id="problem-title">Loading problem...</h2>
-            <div class="problem-meta">
-                <span id="problem-difficulty"></span>
-                <span id="problem-time-limit"></span>
-                <span id="problem-memory-limit"></span>
-            </div>
-            <div id="problem-description" class="problem-description">
-                <p>Loading description...</p>
-            </div>
+  <div class="battle-container">
+    <!-- Cột trái: Thông tin bài toán & Kết quả -->
+    <div class="left-panel">
+      <section class="problem-section">
+        <h2 id="problem-title">Loading problem...</h2>
+        <div class="problem-meta">
+          <span id="problem-difficulty" class="tag"></span>
+          <span id="problem-time-limit" class="tag"></span>
+          <span id="problem-memory-limit" class="tag"></span>
         </div>
-        <hr style="margin: 20px 0; border-color: #0f3460;" />
+        <div id="problem-description" class="problem-description">
+          <p>Loading description...</p>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="submission-section">
         <h3>Submission Result</h3>
-        <div id="submission-result-container">
-            <div>Submit your code to see the results.</div>
+        <div id="submission-result-container" class="submission-result">
+          <p>Submit your code to see the results.</p>
         </div>
+      </section>
     </div>
 
     <!-- Cột phải: Header trận đấu & Code Editor -->
-    <div class="main-content">
-        <!-- Header trận đấu -->
-        <div class="match-header">
-            <div class="player-info" id="player1-info">
-                <div class="username">Player 1</div>
-                <div class="rating">Rating: ...</div>
-            </div>
-            <div class="timer" id="match-timer">00:00</div>
-            <div class="player-info" id="player2-info">
-                <div class="username">Player 2</div>
-                <div class="rating">Rating: ...</div>
-            </div>
+    <div class="right-panel">
+      <header class="match-header">
+        <div class="player-info" id="player1-info">
+          <div class="username">Player 1</div>
+          <div class="rating">Rating: ...</div>
         </div>
-        
-        <!-- Code Editor -->
-        <div class="editor-wrapper panel">
-            <div class="editor-panel">
-                <div class="editor-header">
-                    <div class="language-selector">
-                        <label for="language">Language: </label>
-                        <select id="language-selector">
-                            <option value="cpp">C++</option>
-                            <option value="python">Python</option>
-                        </select>
-                    </div>
-                </div>
-                <textarea
-                    id="code-editor"
-                    class="code-editor"
-                    spellCheck="false"
-                ></textarea>
-                <div class="editor-footer">
-                    <button id="submit-btn" class="action-btn submit-btn">
-                        Submit Solution
-                    </button>
-                </div>
-            </div>
+        <div class="timer" id="match-timer">00:00</div>
+        <div class="player-info" id="player2-info">
+          <div class="username">Player 2</div>
+          <div class="rating">Rating: ...</div>
         </div>
-    </div>
-</div>
+      </header>
 
+      <section class="editor-section">
+        <div class="editor-header">
+          <label for="language-selector">Language:</label>
+        <select id="language-selector">
+          <option value="52">C++ (GCC 7.4.0)</option>
+          <option value="71">Python (3.8.1)</option>
+          <option value="63">JavaScript (Node.js 12.14.0)</option>
+        </select>
+
+        </div>
+
+        <textarea
+          id="code-editor"
+          class="code-editor"
+          spellcheck="false"
+        ></textarea>
+
+        <div class="editor-footer">
+          <button id="submit-btn" class="action-btn submit-btn">Submit Solution</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

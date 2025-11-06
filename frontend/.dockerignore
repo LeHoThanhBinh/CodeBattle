@@ -1,0 +1,23 @@
+# frontend/.dockerignore
+
+# QUAN TRỌNG: Bỏ qua thư mục node_modules trên máy thật.
+# Container sẽ tự cài đặt phiên bản của riêng nó.
+node_modules/
+
+# Bỏ qua các thư mục build (nếu có)
+dist/
+build/
+
+# Bỏ qua các file log và debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Bỏ qua file biến môi trường
+.env*
+
+# Bỏ qua các file của Git và Editor
+.git
+.gitignore
+.vscode/
+.idea/

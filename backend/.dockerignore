@@ -1,0 +1,21 @@
+# backend/.dockerignore
+
+# Bỏ qua môi trường ảo của Python trên máy thật
+venv/
+.venv/
+
+# Bỏ qua các file cache của Python
+__pycache__/
+*.pyc
+
+# QUAN TRỌNG: Không bao giờ đưa file biến môi trường vào image
+.env
+
+# Bỏ qua database SQLite (nếu dùng cho local dev)
+db.sqlite3
+
+# Bỏ qua các file của Git và Editor
+.git
+.gitignore
+.vscode/
+.idea/

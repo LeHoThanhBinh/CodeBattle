@@ -2,19 +2,19 @@
 import { initLoginPage } from './pages/login.js';
 import { initRegisterPage } from './pages/register.js';
 import { initDashboardPage } from './pages/dashboard.js';
-import { initAdminDashboardPage } from './pages/admin-dashboard.js'; // <<< BỔ SUNG: Import trang Admin
+import { initAdminDashboardPage } from './pages/admin-dashboard.js';
+import { initBattleRoomPage } from './pages/battle-room.js';
 
 /**
  * Hàm router chính, quyết định trang nào sẽ được hiển thị.
  */
 const router = async () => {
     const routes = [
-        // Mỗi view giờ là một hàm nhận router làm tham số
-        // để có thể thực hiện chuyển trang từ bên trong logic của trang đó.
         { path: "/login", view: (router) => initLoginPage(router) },
         { path: "/register", view: (router) => initRegisterPage(router) },
         { path: "/dashboard", view: (router) => initDashboardPage(router) },
-        { path: "/admin-dashboard", view: (router) => initAdminDashboardPage(router) }, // <<< BỔ SUNG: Route cho Admin
+        { path: "/admin-dashboard", view: (router) => initAdminDashboardPage(router) },
+        { path: "/battle-room", view: (router) => initBattleRoomPage(router) },
     ];
 
     let currentPath = location.pathname;
@@ -34,16 +34,15 @@ const router = async () => {
     const authRoutes = ['/login', '/register'];
     if (authRoutes.includes(currentPath) && isAuth) {
         history.replaceState(null, null, "/dashboard");
-        currentPath = "/dashboard"; // Cập nhật lại đường dẫn để xử lý tiếp
+        currentPath = "/dashboard";
     }
     
     // 2. Ngăn người dùng chưa đăng nhập vào các trang cần bảo vệ
-    // <<< BỔ SUNG: Thêm '/admin-dashboard' vào danh sách cần bảo vệ
-    const protectedRoutes = ['/dashboard', '/admin-dashboard'];
+    const protectedRoutes = ['/dashboard', '/admin-dashboard', '/battle-room'];
     if (protectedRoutes.includes(currentPath) && !isAuth) {
         console.warn("Access to protected route denied. Redirecting to login.");
         history.replaceState(null, null, "/login");
-        router(); // Gọi lại router để render trang login
+        router(); 
         return; 
     }
 
@@ -56,13 +55,14 @@ const router = async () => {
     }
     
     try {
+        // Tải file HTML tương ứng với đường dẫn (ví dụ: /html/dashboard.html)
         const html = await fetch(`/html${match.path}.html`).then(data => {
             if (!data.ok) throw new Error(`HTML template for ${match.path} not found`);
             return data.text();
         });
 
         document.querySelector("#app").innerHTML = html;
-        // Truyền chính hàm router vào cho hàm view để nó có thể sử dụng
+        // Chạy logic JavaScript cho trang vừa tải
         match.view(router);
     } catch (error) {
         console.error("Failed to load page:", error);
@@ -81,11 +81,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.addEventListener("click", e => {
         const anchor = e.target.closest('a[data-link]');
         if (anchor) {
-            e.preventDefault(); // Ngăn trình duyệt tải lại toàn bộ trang
-            history.pushState(null, null, anchor.href); // Thay đổi URL trên thanh địa chỉ
-            router(); // Gọi router để hiển thị trang mới
+            e.preventDefault(); 
+            history.pushState(null, null, anchor.href); 
+            router(); 
         }
     });
     router(); // Chạy router lần đầu tiên
 });
-

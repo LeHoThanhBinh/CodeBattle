@@ -1,8 +1,28 @@
-Django>=4.2
-djangorestframework>=3.14
-djangorestframework-simplejwt>=5.3
-channels>=4.0
-python-decouple>=3.8
-django-cors-headers>=4.3
-# mssql
-pymysql>=1.0.2
+# --- Core Django Framework ---
+Django==4.2.15
+
+# --- ASGI Server & WebSockets ---
+daphne==4.1.2
+channels==4.1.0
+channels-redis==4.2.0
+
+# --- RESTful API & Authentication ---
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+
+# --- Celery for Background Tasks (The Judge) ---
+celery==5.3.6
+redis==5.0.4
+
+# --- Database Driver & Utilities ---
+pymysql==1.1.0
+django-cors-headers==4.3.1
+python-decouple==3.8
+
+# --- Docker Control for Judge Service ---
+docker==6.1.3
+aiohttp==3.9.5
+
+# --- Optional (safe to include) ---
+psycopg2-binary==2.9.9
+requests==2.32.3
