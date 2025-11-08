@@ -1,7 +1,6 @@
-// THAY THẾ TOÀN BỘ FILE: frontend/pages/admin-dashboard.js
-
 import { apiFetch } from '../services/api.js';
 import { createBarChart } from '../components/chart.js';
+import { getAccessToken } from '../services/storage.js';
 
 let userActivityChart = null;
 let reportActivityChart = null; 
@@ -13,11 +12,9 @@ export function initAdminDashboardPage(router) {
     setupUserTableListeners();
     setupFilterListeners();
     setupNavigationListeners();
-    
-    // [SỬA ĐỔI] Thêm hàm setup bộ lọc mới
+    connectToAdminStatsSocket();
     setupReportFilters(); 
-    
-    fetchAdminStats(); // Tải dữ liệu cho tab đầu tiên
+    fetchAdminStats(); 
 }
 
 function setupNavigationListeners() {
@@ -37,50 +34,74 @@ function setupNavigationListeners() {
                 targetSection.classList.add('active');
                 
                 // Tải dữ liệu dựa trên tab được nhấp
-                if (targetSectionId === 'users') {
+                if (targetSectionId === 'dashboard') { // [TỐI ƯU]
+                    fetchAdminStats();
+                } else if (targetSectionId === 'users') {
                     fetchUsers().then(() => setupUserTableListeners());
                 } else if (targetSectionId === 'exams') {
                     fetchExams();
                 } else if (targetSectionId === 'monitor') {
                     fetchMonitorData();
                 } else if (targetSectionId === 'reports') {
-                    // Khi nhấp vào tab Báo cáo, tự động "Tạo báo cáo"
                     fetchReportData(); 
                 }
             }
         });
     });
+    
+    // [TỐI ƯU] Tải dữ liệu cho tab đang active khi tải trang
+    // Thay vì luôn gọi fetchAdminStats, hãy kiểm tra xem tab nào đang active
+    const activeMenuItem = document.querySelector('.menu-item.active');
+    if (activeMenuItem) {
+        const activeSectionId = activeMenuItem.getAttribute('data-target');
+        // Kích hoạt logic tải dữ liệu cho tab active
+        if (activeSectionId === 'dashboard') {
+            fetchAdminStats();
+        } else if (activeSectionId === 'users') {
+            fetchUsers().then(() => setupUserTableListeners());
+        } else if (activeSectionId === 'exams') {
+            fetchExams();
+        } else if (activeSectionId === 'monitor') {
+            fetchMonitorData();
+        } else if (activeSectionId === 'reports') {
+            fetchReportData();
+        }
+    } else {
+        // Fallback: Nếu không có gì active, tải dashboard
+        fetchAdminStats();
+    }
 }
 
-// [SỬA ĐỔI] - Thêm hàm mới để xử lý bộ lọc
 function setupReportFilters() {
     const generateReportBtn = document.getElementById('generateReportBtn');
     
     if (generateReportBtn) {
         generateReportBtn.addEventListener('click', () => {
-            // Khi nhấn nút "Tạo Báo cáo", chạy lại hàm fetch
             fetchReportData();
         });
     }
-    
-    // (Sau này chúng ta sẽ thêm logic cho 'Xuất Excel' ở đây)
 }
 
-// [SỬA ĐỔI] - Nâng cấp hàm fetchReportData
 async function fetchReportData() {
     console.log("Đang tải dữ liệu Báo cáo...");
-    
-    // 1. Đọc giá trị từ bộ lọc
-    const reportType = document.getElementById('reportType').value;
-    const timeRange = document.getElementById('timeRange').value;
 
-    // 2. Tải Bảng Top 10
+    // [SỬA LỖI] - Kiểm tra các phần tử này trước khi dùng
+    const reportTypeEl = document.getElementById('reportType');
+    const timeRangeEl = document.getElementById('timeRange');
+    
+    // Nếu không tìm thấy (vì đang ở tab khác), thì không làm gì cả
+    if (!reportTypeEl || !timeRangeEl) {
+        // console.warn("Không tìm thấy bộ lọc báo cáo trên trang này.");
+        return; 
+    }
+    
+    const reportType = reportTypeEl.value;
+    const timeRange = timeRangeEl.value;
+
     const topPlayersTableBody = document.getElementById('topPlayersTableBody');
     if(topPlayersTableBody) {
         topPlayersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem;">Đang tải...</td></tr>';
-        
         try {
-            // [SỬA ĐỔI] - Gọi API Top 10 mới (và gửi kèm bộ lọc)
             const topPlayers = await apiFetch(`/api/admin/top-players/?report_type=${reportType}&time_range=${timeRange}`);
             
             if (topPlayers.length === 0) {
@@ -102,41 +123,61 @@ async function fetchReportData() {
         }
     }
     
-    // 3. Tải Biểu đồ Xu hướng Đăng nhập
     try {
-        // [SỬA ĐỔI] - Gửi kèm bộ lọc
         const chartData = await apiFetch(`/api/admin/user-activity-chart/?report_type=${reportType}&time_range=${timeRange}`);
         
         if (reportActivityChart) {
             reportActivityChart.destroy();
         }
+        const canvasId = 'reportsActivityChartCanvas'; 
+        const canvas = document.getElementById(canvasId);
 
-        reportActivityChart = createBarChart(
-            'reportsActivityChartCanvas',
-            chartData.labels,
-            chartData.data,
-            'Lượt đăng nhập'
-        );
+        if (canvas) { 
+            reportActivityChart = createBarChart(
+                canvasId, 
+                chartData.labels,
+                chartData.data,
+                'Lượt đăng nhập'
+            );
+        }
     } catch (error) {
         console.error("Lỗi khi tải dữ liệu biểu đồ báo cáo:", error);
     }
 }
 
-// --- (CÁC HÀM CÒN LẠI GIỮ NGUYÊN) ---
-// (fetchAdminStats, fetchUsers, fetchExams, fetchMonitorData, ...)
-// (setupModalListeners, setupTableListeners, ...)
-
+// [SỬA LỖI] - Hàm này là nguyên nhân chính gây lỗi
 async function fetchAdminStats() {
     try {
         const stats = await apiFetch('/api/admin/stats/');
-        document.getElementById('adminTotalUsersStat').textContent = stats.total_users;
-        document.getElementById('adminActiveUsersStat').textContent = stats.active_users;
-        document.getElementById('adminTotalExamsStat').textContent = stats.total_exams;
-        document.getElementById('adminMatchesTodayStat').textContent = stats.matches_today;
+        
+        // [SỬA LỖI] Bọc các dòng gán .textContent trong kiểm tra 'if'
+        
+        const totalUsersEl = document.getElementById('adminTotalUsersStat');
+        if (totalUsersEl) {
+            totalUsersEl.textContent = stats.total_users;
+        }
+
+        const activeUsersEl = document.getElementById('adminActiveUsersStat');
+        if (activeUsersEl) {
+            activeUsersEl.textContent = stats.active_users;
+        }
+
+        const totalExamsEl = document.getElementById('adminTotalExamsStat');
+        if (totalExamsEl) {
+            totalExamsEl.textContent = stats.total_exams;
+        }
+
+        // Đây là thẻ mới chúng ta vừa thêm ở Bước 1
+        const matchesTodayEl = document.getElementById('adminMatchesTodayStat');
+        if (matchesTodayEl) {
+            matchesTodayEl.textContent = stats.matches_today;
+        }
+
     } catch (error) {
-        console.error("Failed to fetch admin stats:", error);
+        console.error("Failed to fetch admin stats (API Error):", error);
     }
 }
+
 async function fetchUsers() {
     const tableBody = document.getElementById('userTableBody');
     if (!tableBody) return;
@@ -164,6 +205,7 @@ async function fetchUsers() {
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: red;">Lỗi khi tải dữ liệu!</td></tr>';
     }
 }
+
 async function fetchExams() {
     const tableBody = document.getElementById('examTableBody');
     if (!tableBody) return;
@@ -199,21 +241,43 @@ async function fetchExams() {
         tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1rem; color: red;">Lỗi khi tải dữ liệu!</td></tr>';
     }
 }
+
+// [SỬA LỖI] - Hàm này cũng có nguy cơ bị lỗi tương tự
 async function fetchMonitorData() {
     console.log("Đang tải dữ liệu giám sát...");
+
+    // [SỬA LỖI] Tạo biến cho các phần tử
+    const uptimeEl = document.getElementById('monitorUptimeStat');
+    const onlineUsersEl = document.getElementById('monitorOnlineUsersStat');
+    const matchesEl = document.getElementById('monitorMatchesInProgressStat');
+    const latencyEl = document.getElementById('monitorAvgLatencyStat');
+
+    // Nếu không có phần tử nào (đang ở tab khác), thì không làm gì cả
+    if (!uptimeEl && !onlineUsersEl && !matchesEl && !latencyEl) {
+        // console.warn("Không tìm thấy các phần tử giám sát trên trang này.");
+        return;
+    }
+
     try {
         const stats = await apiFetch('/api/admin/monitor-stats/');
-        document.getElementById('monitorUptimeStat').textContent = stats.uptime;
-        document.getElementById('monitorOnlineUsersStat').textContent = stats.online_users;
-        document.getElementById('monitorMatchesInProgressStat').textContent = stats.matches_in_progress;
-        document.getElementById('monitorAvgLatencyStat').textContent = stats.avg_latency_ms + ' ms';
+        
+        // [SỬA LỖI] Kiểm tra trước khi gán
+        if (uptimeEl) uptimeEl.textContent = stats.uptime;
+        if (onlineUsersEl) onlineUsersEl.textContent = stats.online_users;
+        if (matchesEl) matchesEl.textContent = stats.matches_in_progress;
+        if (latencyEl) latencyEl.textContent = stats.avg_latency_ms + ' ms';
+
     } catch (error) {
         console.error("Lỗi khi tải thống kê giám sát:", error);
-        document.getElementById('monitorUptimeStat').textContent = "Lỗi";
-        document.getElementById('monitorOnlineUsersStat').textContent = "Lỗi";
-        document.getElementById('monitorMatchesInProgressStat').textContent = "Lỗi";
-        document.getElementById('monitorAvgLatencyStat').textContent = "Lỗi";
+        
+        // [SỬA LỖI] Kiểm tra trong cả khối 'catch'
+        if (uptimeEl) uptimeEl.textContent = "Lỗi";
+        if (onlineUsersEl) onlineUsersEl.textContent = "Lỗi";
+        if (matchesEl) matchesEl.textContent = "Lỗi";
+        if (latencyEl) latencyEl.textContent = "Lỗi";
     }
+
+    // Phần còn lại của hàm (tải log)
     const logTableBody = document.getElementById('activityLogTableBody');
     if (!logTableBody) return;
     logTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 1rem;">Đang tải nhật ký...</td></tr>';
@@ -250,21 +314,32 @@ async function fetchMonitorData() {
         console.error("Lỗi khi tải nhật ký hoạt động:", error);
         logTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 1rem; color: red;">Lỗi khi tải nhật ký!</td></tr>';
     }
+    
+    // Tải biểu đồ
     try {
         const chartData = await apiFetch('/api/admin/activity-chart/');
         if (userActivityChart) {
             userActivityChart.destroy();
         }
-        userActivityChart = createBarChart(
-            'userActivityChartCanvas',
-            chartData.labels,
-            chartData.data,
-            'Hoạt động người dùng'
-        );
+        const canvasId = 'userActivityChartCanvas'; 
+        const canvas = document.getElementById(canvasId); 
+        
+        if (canvas) { 
+            userActivityChart = createBarChart(
+                canvasId, 
+                chartData.labels,
+                chartData.data,
+                'Số trận đấu' 
+            );
+        }
     } catch (error) {
-        console.error("Lỗi khi tải dữ liệu biểu đồ:", error);
+        console.error("Lỗi khi tải dữ liệu biểu đồ (Giám sát):", error);
     }
 }
+
+// 
+// CÁC HÀM BÊN DƯỚI GIỮ NGUYÊN
+// 
 function setupModalListeners() {
     const createModal = document.getElementById('createModal');
     const importModal = document.getElementById('importModal');
@@ -399,4 +474,54 @@ function setupFilterListeners() {
             });
         });
     }
+}
+
+/**
+ * Mở WebSocket cho trang admin để nhận cập nhật real-time.
+ */
+function connectToAdminStatsSocket() {
+    const token = getAccessToken();
+    if (!token) return; // Không thể kết nối nếu không phải admin
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/admin/dashboard/`;
+
+    const adminSocket = new WebSocket(wsUrl);
+
+    adminSocket.onopen = () => {
+        console.log("Kết nối Admin Stats thành công.");
+        // Gửi token để xác thực
+        adminSocket.send(JSON.stringify({
+            "type": "auth",
+            "token": token
+        }));
+    };
+
+    adminSocket.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'stats_update' && data.active_users !== undefined) {
+            console.log("Nhận cập nhật stats:", data.active_users);
+
+            // Cập nhật thẻ "Người dùng hoạt động"
+            const activeUsersEl = document.getElementById('adminActiveUsersStat');
+            if (activeUsersEl) {
+                activeUsersEl.textContent = data.active_users;
+            }
+
+            // Cập nhật thẻ "Trạng thái" trong bảng Quản lý Người dùng
+            // (Code này hơi phức tạp, chúng ta sẽ làm sau nếu bạn muốn)
+        } else if (data.type === 'error') {
+            console.error("Lỗi từ Admin WS:", data.message);
+        }
+    };
+
+    adminSocket.onclose = () => {
+        console.log("Kết nối Admin Stats bị ngắt.");
+        // Có thể thêm logic tự động kết nối lại ở đây
+    };
+
+    adminSocket.onerror = (e) => {
+        console.error("Lỗi WebSocket Admin:", e);
+    };
 }

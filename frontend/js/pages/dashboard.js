@@ -2,6 +2,7 @@ import { getUserProfile } from '../services/auth.js';
 import { clearTokens } from '../services/storage.js';
 import { apiFetch } from '../services/api.js';
 import { setupDashboardSocket } from '../services/websocket.js';
+import { disconnectFromDashboardSocket } from './login.js';
 
 // --- BIẾN TOÀN CỤC ---
 let spaRouter = null; // Biến để lưu hàm router từ main.js
@@ -168,13 +169,37 @@ function hidePlayerStatsModal() {
 }
 
 
+// *** THAY THẾ TOÀN BỘ HÀM NÀY BẰNG CODE BÊN DƯỚI ***
+
 // --- GẮN SỰ KIỆN ---
 function setupEventListeners(profile, router, socket) {
     // Nút Đăng xuất
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        
+        // [SỬA LỖI] - Thay thế logic logout cũ
+        logoutBtn.addEventListener('click', async () => {
+            
+            // 1. (MỚI) Đóng WebSocket
+            // Báo cho consumer biết để nó set is_online = false
+            disconnectFromDashboardSocket(); 
+
+            // 2. (MỚI) Gọi API /api/logout/
+            // Báo cho backend biết (để nó cũng gửi tín hiệu cho admin)
+            try {
+                await apiFetch('/api/logout/', {
+                    method: 'POST',
+                    // (Không cần body, chỉ cần token trong header)
+                });
+            } catch (error) {
+                // Kể cả khi API lỗi, vẫn tiếp tục logout ở frontend
+                console.error("Lỗi khi gọi API /api/logout/:", error);
+            }
+
+            // 3. Xóa token
             clearTokens();
+            
+            // 4. Chuyển hướng về trang login
             history.pushState(null, null, '/login');
             router();
         });
@@ -233,6 +258,59 @@ function setupEventListeners(profile, router, socket) {
         });
     }
 }
+
+    // Thanh tìm kiếm
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(async (e) => {
+            const players = await apiFetch(`/api/online-players/?search=${e.target.value}`);
+            renderOnlinePlayers(players);
+        }, 300));
+    }
+
+    // Danh sách người chơi (LOGIC QUAN TRỌNG)
+    const playerList = document.getElementById('playerList');
+    if (playerList) {
+        playerList.addEventListener('click', (event) => {
+            
+            // Phân biệt giữa click nút "Challenge" và click "xem thông tin"
+            const challengeButton = event.target.closest('.btn-challenge');
+            const playerItem = event.target.closest('.player-item');
+
+            if (challengeButton) {
+                // 1. User click nút "Challenge"
+                event.stopPropagation(); // Ngăn không cho sự kiện click lan ra playerItem
+                const opponentId = challengeButton.dataset.opponentId;
+                const opponentName = challengeButton.dataset.opponentName;
+                
+                currentChallengeInfo = { opponentId, opponentName };
+                challengeButton.disabled = true;
+                challengeButton.textContent = 'Sent!';
+
+                socket.send(JSON.stringify({
+                    type: 'send_challenge',
+                    target_user_id: parseInt(opponentId, 10)
+                }));
+                
+                showWaitingModal(opponentName, () => {
+                    socket.send(JSON.stringify({
+                        type: 'cancel_challenge',
+                        target_user_id: parseInt(opponentId, 10)
+                    }));
+                    hideWaitingModal();
+                });
+
+            } else if (playerItem) {
+                // 2. User click vào thẻ player (để xem stats)
+                const opponentId = playerItem.dataset.playerId;
+                const opponentName = playerItem.dataset.playerName;
+                
+                if (opponentId && opponentName) {
+                    showPlayerStatsModal(opponentId, opponentName);
+                }
+            }
+        });
+    }
 
 // --- BỘ NÃO XỬ LÝ WEBSOCKET ---
 function handleWebSocketMessage(data, socket) {

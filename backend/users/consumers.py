@@ -1,5 +1,3 @@
-# backend/users/consumers.py
-
 import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -189,3 +187,84 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         except User.DoesNotExist:
             logger.error(f"🚨 Could not find user {player1_id} or {player2_id} to create match.")
             return None
+
+# DÁN VÀO CUỐI FILE users/consumers.py
+
+# --- Helper Function (chạy trên thread riêng) ---
+
+@database_sync_to_async
+def get_online_users_count():
+    """
+    Đếm số user (không phải admin) đang online
+    """
+    return UserProfile.objects.filter(is_online=True, user__is_staff=False).count()
+
+# --- Consumer 2: Dành RIÊNG cho Admin ---
+
+class AdminConsumer(AsyncWebsocketConsumer):
+    """
+    Consumer này CHỈ DÀNH RIÊNG cho trang admin-dashboard
+    để lắng nghe các cập nhật.
+    """
+    async def connect(self):
+        self.user = self.scope['user']
+        
+        # Chỉ admin mới được kết nối
+        if not self.user.is_authenticated or not self.user.is_staff:
+            logger.warning(f"❌ User không phải admin '{self.user}' cố kết nối Admin WS.")
+            await self.close()
+            return
+            
+        await self.accept()
+        
+        # Thêm admin này vào group "dashboard_global"
+        # để lắng nghe tín hiệu từ DashboardConsumer
+        self.dashboard_group = 'dashboard_global'
+        await self.channel_layer.group_add(
+            self.dashboard_group,
+            self.channel_name
+        )
+        logger.info(f"✅ Admin '{self.user.username}' connected to Admin WS.")
+        
+        # Gửi số liệu thống kê ban đầu ngay khi admin kết nối
+        await self.send_stats()
+
+    async def disconnect(self, close_code):
+        if self.user.is_authenticated and self.user.is_staff:
+            # Xóa admin khỏi group
+            await self.channel_layer.group_discard(
+                self.dashboard_group,
+                self.channel_name
+            )
+            logger.info(f"❌ Admin '{self.user.username}' disconnected from Admin WS.")
+
+    # --- Hàm xử lý tin nhắn ---
+
+    async def event_user_status_update(self, event):
+        """
+        Hàm này được gọi khi có tin nhắn "type": "event_user_status_update"
+        (từ DashboardConsumer) gửi đến group "dashboard_global".
+        """
+        # Gửi số liệu thống kê mới cho admin
+        logger.info(f"🔄 Admin WS nhận được user_status_update, gửi lại stats...")
+        await self.send_stats()
+
+    # --- Hàm trợ giúp ---
+    
+    async def send_stats(self):
+        """
+        Lấy số liệu và gửi qua WebSocket cho admin
+        """
+        try:
+            count = await get_online_users_count()
+            logger.info(f"📊 Gửi stats_update, active_users = {count}")
+            await self.send(text_data=json.dumps({
+                'type': 'stats_update',
+                'active_users': count
+            }))
+        except Exception as e:
+            logger.error(f"🚨 Lỗi khi gửi stats: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': str(e)
+            }))

@@ -1,8 +1,10 @@
 from problems.models import Problem  
 from matches.models import Match
 from django.db import connection
-from datetime import date
+#from datetime import date
 import time
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework import status
@@ -41,13 +43,24 @@ class RegisterView(generics.CreateAPIView):
 @permission_classes([IsAuthenticated]) 
 def logout_user(request):
     """
-    Đăng xuất user, set is_online = False.
+    Đăng xuất user, set is_online = False VÀ broadcast cho admin.
     """
     try:
         user = request.user
         if user.userprofile.is_online:
             user.userprofile.is_online = False
             user.userprofile.save(update_fields=['is_online'])
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "dashboard_global", # Phải khớp với group trong consumer
+                {
+                    "type": "event_user_status_update", # Phải khớp với hàm xử lý
+                    'payload': { # Gửi payload giả lập DashboardConsumer
+                        'user_id': user.id, 'username': user.username, 'is_online': False
+                    }
+                }
+            )
+
         return Response({"message": "Đăng xuất thành công"}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -57,19 +70,12 @@ def logout_user(request):
 # ===================================================================
 
 class UserProfileView(generics.RetrieveAPIView):
-    """
-    Lấy thông tin profile CƠ BẢN của user đã xác thực (dùng cho thanh navbar).
-    Serializer sẽ tự tính rank (N+1) vì đây chỉ là 1 object.
-    """
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
     def get_object(self):
         return self.request.user
 
 class UserStatsView(generics.RetrieveAPIView):
-    """
-    Lấy thông tin stats (thẻ) của user đã xác thực (dùng cho Dashboard).
-    """
     serializer_class = UserStatsSerializer
     permission_classes = [IsAuthenticated]
     def get_object(self):
@@ -82,17 +88,10 @@ class UserStatsView(generics.RetrieveAPIView):
             return stats
 
 class OnlinePlayersView(generics.ListAPIView):
-    """
-    Lấy danh sách user đang online (đã TỐI ƯU N+1).
-    """
     serializer_class = UserProfileSerializer 
     permission_classes = [IsAuthenticated]
-    
     def get_queryset(self):
         search_term = self.request.query_params.get('search', None)
-        
-        # TỐI ƯU HÓA N+1 Query:
-        # Thêm 'annotated_rank' để UserProfileSerializer sử dụng
         queryset = User.objects.select_related('userprofile').filter(
             userprofile__is_online=True,
             is_staff=False
@@ -109,15 +108,10 @@ class OnlinePlayersView(generics.ListAPIView):
         return queryset
 
 class LeaderboardView(generics.ListAPIView):
-    """
-    Lấy Top 5 user có ELO cao nhất (đã TỐI ƯU N+1).
-    """
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        # TỐI ƯU HÓA N+1 Query:
-        # Thêm 'annotated_rank' để UserProfileSerializer sử dụng
         return User.objects.select_related('userprofile').filter(
             is_staff = False
         ).annotate(
@@ -138,10 +132,17 @@ def admin_get_stats(request):
     Lấy 4 thẻ thống kê chính cho Admin.
     """
     try:
+        # [SỬA LỖI] Lấy ngày hôm nay theo múi giờ 'Asia/Ho_Chi_Minh' đã cài đặt
+        today = timezone.now().date()
+        
+        # 3 query này của bạn đã ĐÚNG, không cần sửa
         total_users = User.objects.filter(is_staff=False).count()
         active_users = UserProfile.objects.filter(is_online=True, user__is_staff=False).count() 
         total_exams = Problem.objects.count()
-        matches_today = Match.objects.filter(start_time__date=date.today()).count()
+        
+        # [SỬA LỖI] Dùng biến 'today' đã nhận biết múi giờ để query
+        matches_today = Match.objects.filter(start_time__date=today).count()
+        
         stats = {
             'total_users': total_users,
             'active_users': active_users, 
@@ -197,11 +198,8 @@ def admin_delete_user(request, user_id):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_get_monitor_stats(request):
-    """
-    Lấy thông tin giám sát hệ thống (Monitor).
-    """
     try:
-        online_users = UserProfile.objects.filter(is_online=True).count()
+        online_users = UserProfile.objects.filter(is_online=True, user__is_staff=False).count()
         matches_in_progress = Match.objects.filter(status='IN_PROGRESS').count() 
         
         # Tính latency (ping)

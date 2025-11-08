@@ -141,8 +141,9 @@ tbody tr:nth-child(even) {
     background-color: #28a745;
 }
 
-.status.locked, .status-locked {
-    background-color: #dc3545;
+.status.offline {
+    background-color: #dc3545; /* Đây là màu đỏ (giống nút Delete/Locked) */
+    color: #fff;
 }
 
 .action-btn, .btn-edit, .btn-lock, .btn-delete {
@@ -196,7 +197,7 @@ tbody tr:nth-child(even) {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    margin-top: 30px;
+margin-top: 30px;
 }
 .chart-title {
     font-size: 1.2rem;
@@ -368,4 +369,4 @@ tbody tr:nth-child(even) {
     cursor: pointer;
     margin-right: 10px;
     margin-bottom: 10px;
-} 
+}

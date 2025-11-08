@@ -1,5 +1,5 @@
 <div class="admin-layout">
-    
+
     <aside class="sidebar">
         <h2 class="sidebar-title">Admin</h2>
         <hr class="divider" />
@@ -17,21 +17,20 @@
             <h2 class="section-title">Dashboard Tổng quan</h2>
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h3 id="adminTotalUsersStat">1,111</h3>
+                    <h3 id="adminTotalUsersStat">0</h3>
                     <p>Tổng Người dùng</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="adminActiveUsersStat">789</h3>
+                    <h3 id="adminActiveUsersStat">0</h3>
                     <p>Người dùng hoạt động</p>
                 </div>
                 <div class="stat-card">
-                    <h3 id="adminTotalExamsStat">56</h3>
+                    <h3 id="adminTotalExamsStat">0</h3>
                     <p>Tổng Bộ đề</p>
                 </div>
-                <div class="scoreboard-row opponent-row">
-                    <span id="opponent-username" class="scoreboard-player">Opponent</span>
-                    <span id="opponent-submission-status" class="scoreboard-status pending">Not Submitted</span>
-                    <span id="opponent-submission-time" class="scoreboard-time">-- ms</span>
+                <div class="stat-card">
+                    <h3 id="adminMatchesTodayStat">0</h3>
+                    <p>Trận đấu Hôm nay</p>
                 </div>
             </div>
         </section>
@@ -60,6 +59,7 @@
 
         <section id="exams" class="section">
             <h2 class="section-title">Quản lý Bộ đề</h2>
+            
             <div class="filter-container">
                 <label for="levelFilter">Lọc theo cấp độ:</label>
                 <select id="levelFilter">
@@ -69,8 +69,10 @@
                     <option value="Nâng cao">Nâng cao</option>
                 </select>
             </div>
+
             <button id="showCreateModalBtn">Tạo Bộ đề</button>
             <button id="showImportModalBtn">Import Bộ đề</button>
+
             <div class="table-container">
                 <table>
                     <thead>
@@ -164,16 +166,16 @@
                 <button id="generateReportBtn" class="report-btn primary">Tạo Báo cáo</button>
                 <button id="exportExcelBtn" class="report-btn secondary">Xuất Excel</button>
             </div>
-        
+
             <div class="chart-container-wrapper">
                 <h3 class="chart-title">Xu hướng Người dùng Hoạt động</h3>
                 <div class="chart-container">
                     <canvas id="reportsActivityChartCanvas"></canvas>
                 </div>
             </div>
-        
+
             <div class="table-container">
-                 <h3 class="table-title">Top 10 Người chơi Xuất sắc</h3>
+                <h3 class="table-title">Top 10 Người chơi Xuất sắc</h3>
                 <table>
                     <thead>
                         <tr>
@@ -185,8 +187,11 @@
                         </tr>
                     </thead>
                     <tbody id="topPlayersTableBody">
-                        <tr><td colspan="5" style="text-align: center; padding: 1rem;">Đang tải...</td></tr>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 1rem;">Đang tải...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </section>
+    </main> </div> 

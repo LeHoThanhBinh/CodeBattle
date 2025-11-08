@@ -2,7 +2,7 @@ import { initLoginPage } from './pages/login.js';
 import { initRegisterPage } from './pages/register.js';
 import { initDashboardPage } from './pages/dashboard.js';
 import { initAdminDashboardPage } from './pages/admin-dashboard.js';
-import { initBattleRoomPage } from './pages/battle-room.js'; // <- Đã gộp
+import { initBattleRoomPage } from './pages/battle-room.js'; 
 
 const router = async () => {
     const routes = [
@@ -10,7 +10,7 @@ const router = async () => {
         { path: "/register", view: (router) => initRegisterPage(router) },
         { path: "/dashboard", view: (router) => initDashboardPage(router) },
         { path: "/admin-dashboard", view: (router) => initAdminDashboardPage(router) },
-        { path: "/battle-room", view: (router) => initBattleRoomPage(router) }, // <- Đã gộp
+        { path: "/battle-room", view: (router) => initBattleRoomPage(router) }, 
     ];
 
     let currentPath = location.pathname;
@@ -52,7 +52,6 @@ const router = async () => {
         });
 
         document.querySelector("#app").innerHTML = html;
-        // Chạy logic JavaScript cho trang vừa tải (<- Đã gộp, giữ lại comment)
         match.view(router);
     } catch (error) {
         console.error("Failed to load page:", error);
@@ -70,5 +69,5 @@ document.addEventListener("DOMContentLoaded", () => {
             router(); 
         }
     });
-    router(); // Chạy router lần đầu tiên (<- Đã gộp)
+    router(); 
 });

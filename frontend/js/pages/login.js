@@ -1,5 +1,6 @@
 import { loginUser } from '../services/auth.js';
 import { saveTokens } from '../services/storage.js';
+import { getAccessToken } from '../services/storage.js';
 
 /**
  * Xử lý sau khi đăng nhập thành công: lưu token và chuyển hướng bằng router.
@@ -8,7 +9,8 @@ import { saveTokens } from '../services/storage.js';
  */
 function handleSuccessfulLogin(responseData, router) {
     const { access, refresh } = responseData;
-    saveTokens(access, refresh); // Dùng hàm từ storage.js để lưu vào sessionStorage
+    saveTokens(access, refresh);
+    connectToDashboardSocket();
 
     try {
         // Thư viện jwt_decode đã được load từ CDN trong index.html
@@ -23,6 +25,53 @@ function handleSuccessfulLogin(responseData, router) {
     } catch (error) {
         console.error("Failed to decode token:", error);
         displayError("Đã xảy ra lỗi. Vui lòng thử lại.");
+    }
+}
+
+// Biến toàn cục để lưu socket
+let globalUserSocket;
+
+/**
+ * Mở kết nối WebSocket (DashboardConsumer) để báo server "tôi online".
+ */
+function connectToDashboardSocket() {
+    const token = getAccessToken(); // Lấy token từ storage
+    if (!token) return;
+
+    // Xác định giao thức (ws:// hoặc wss://)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Đường dẫn này phải khớp với users/routing.py
+    const wsUrl = `${protocol}//${window.location.host}/ws/dashboard/`; 
+
+    globalUserSocket = new WebSocket(wsUrl);
+
+    globalUserSocket.onopen = () => {
+        console.log("Kết nối Dashboard (is_online) thành công.");
+        // TokenAuthMiddleware của bạn không cần gửi token qua message
+        // nó đọc từ header/query, nhưng nếu cần, bạn có thể gửi:
+        // globalUserSocket.send(JSON.stringify({ "type": "auth", "token": token }));
+    };
+
+    globalUserSocket.onclose = () => {
+        console.log("Kết nối Dashboard (is_online) bị ngắt.");
+        globalUserSocket = null;
+    };
+
+    globalUserSocket.onerror = (e) => {
+        console.error("Lỗi WebSocket Dashboard:", e);
+    };
+
+    // Bạn có thể thêm onmessage nếu DashboardConsumer gửi gì đó
+    // globalUserSocket.onmessage = (e) => { ... }
+}
+
+/**
+ * Hàm này sẽ được gọi từ file xử lý logout
+ */
+export function disconnectFromDashboardSocket() {
+    if (globalUserSocket) {
+        console.log("Đang đóng kết nối Dashboard (is_online)...");
+        globalUserSocket.close();
     }
 }
 
