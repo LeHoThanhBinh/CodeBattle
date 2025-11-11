@@ -1,3 +1,4 @@
+
 services:
   # -------------------------------------
   # 🗄 Database (MySQL cho Backend)
@@ -52,7 +53,7 @@ services:
   backend:
     build:
       context: ./backend
-    image: codebattle-backend-image:latest 
+    image: codebattle-backend-image:latest
     working_dir: /app
     command: daphne -b 0.0.0.0 -p 8000 code_battle_api.asgi:application
     restart: always
@@ -148,19 +149,19 @@ services:
       - codebattle_net
 
   # -------------------------------------
-  # ⚖️ Judge0 API Server (FIXED - Windows Compatible)
+  # ⚖️ Judge0 API Server (Linux FIXED)
   # -------------------------------------
   judge0_server:
     image: judge0/judge0:1.13.0
     container_name: codebattle-judge0_server
-    privileged: true 
+    privileged: true
     restart: always
     environment:
       PORT: "2358"
       RAILS_ENV: production
       SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
       RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
-      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES:-2}
+      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY}
       RAILS_SERVE_STATIC_FILES: "true"
       POSTGRES_HOST: judge0_db
@@ -178,7 +179,7 @@ services:
     command: bash -c "
       rm -f /api/tmp/pids/server.pid;
       export RAILS_MAX_THREADS=${RAILS_MAX_THREADS};
-      export RAILS_SERVER_PROCESSES=${RAILS_SERVER_PROCESSES:-2};
+      export RAILS_SERVER_PROCESSES=${RAILS_SERVER_PROCESSES};
       export WEB_CONCURRENCY=${WEB_CONCURRENCY};
       unset DATABASE_URL;
       echo '🔧 Installing fake isolate wrapper (no sandbox mode)...';
@@ -201,7 +202,7 @@ services:
       - codebattle_net
 
   # -------------------------------------
-  # ⚖️ Judge0 Worker (FIXED - Windows Compatible)
+  # ⚖️ Judge0 Worker (Linux FIXED)
   # -------------------------------------
   judge0_worker:
     image: judge0/judge0:1.13.0
@@ -213,7 +214,7 @@ services:
       RAILS_ENV: production
       SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
       RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
-      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES:-2}
+      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES}
       POSTGRES_HOST: judge0_db
       POSTGRES_PORT: "5432"
       POSTGRES_DB: ${JUDGE0_DB_NAME}
