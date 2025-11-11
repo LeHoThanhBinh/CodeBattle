@@ -194,4 +194,65 @@
                 </table>
             </div>
         </section>
-    </main> </div> 
+
+        <div id="createProblemModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Tạo Bộ đề mới</h2>
+                    <span class="close-btn" id="closeCreateModalBtn">&times;</span>
+                </div>
+
+                <form id="createProblemForm">
+                    <div class="modal-body">
+                        
+                        <div class="form-group">
+                            <label for="problemTitle">Tiêu đề</label>
+                            <input type="text" id="problemTitle" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="problemDescription">Mô tả bài toán</label>
+                            <textarea id="problemDescription" rows="8" required placeholder="Mô tả chi tiết bài toán, bao gồm input, output, và các ràng buộc..."></textarea>
+                        </div>
+                        
+                        <button type="button" id="generateTestcaseBtn">Tạo Test Case bằng AI</button> 
+                        
+                        <div class="form-group">
+                            <label>Xem trước Test Cases</label>
+                            <div id="testcasePreviewArea" class="testcase-preview-area">
+                                <p>Chưa có test case nào...</p>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="problemDifficulty">Cấp độ (1-5)</label>
+                                <select id="problemDifficulty" required>
+                                    <option value="1">1 (Dễ)</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3 (Trung bình)</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5 (Khó)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="problemTimeLimit">Giới hạn thời gian (ms)</label>
+                                <input type="number" id="problemTimeLimit" value="1000" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="problemMemoryLimit">Giới hạn bộ nhớ (MB)</label>
+                                <input type="number" id="problemMemoryLimit" value="256" required>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" id="cancelCreateBtn" class="btn-secondary">Hủy</button> 
+                        <button type="submit" class="btn-primary">Lưu Bộ đề</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        </main> 
+</div>

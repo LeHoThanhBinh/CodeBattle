@@ -5,6 +5,7 @@ Django settings for code_battle_api project.
 from pathlib import Path
 from datetime import timedelta
 from decouple import Config, RepositoryEnv
+import os # 'os' vẫn được giữ lại vì các import khác có thể cần
 
 # --- START: Cấu hình đọc file .env ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -158,3 +159,54 @@ CELERY_RESULT_SERIALIZER = 'json'
 # ==================================
 JUDGE0_URL = config('JUDGE0_URL', default='http://judge0:2358')
 JUDGE0_API_KEY = config('JUDGE0_API_KEY', default='')
+
+# ==================================
+# 💎 GEMINI API CONFIG (ĐÃ SỬA)
+# ==================================
+# Dùng config() để đọc từ file .env, giống như SECRET_KEY
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+
+# ==================================
+# 📝 LOGGING CONFIG
+# ==================================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'submissions': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'matches': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

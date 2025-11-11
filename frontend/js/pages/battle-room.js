@@ -123,6 +123,16 @@ function handleBattleSocketMessage(event) {
             console.log("🔥 Match started!");
             break;
 
+        case "submission.pending":
+            // Submission đã được tạo và đang chờ chấm
+            console.log("⏳ Submission đang được chấm:", data.payload);
+            const statusEl = document.getElementById('submission-status');
+            if (statusEl) {
+                statusEl.textContent = "Judging...";
+                statusEl.className = 'scoreboard-status status-pending';
+            }
+            break;
+
         case "submission_update":
             const result = data.payload;
             renderSubmissionResult(result);

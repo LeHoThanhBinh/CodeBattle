@@ -26,3 +26,4 @@ aiohttp==3.9.5
 # --- Optional (safe to include) ---
 psycopg2-binary==2.9.9
 requests==2.32.3
+google-generativeai>=0.6.0

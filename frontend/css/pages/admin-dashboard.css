@@ -146,6 +146,9 @@ tbody tr:nth-child(even) {
     color: #fff;
 }
 
+/* CSS CŨ CỦA BẠN (vẫn giữ lại) 
+   Lưu ý: .btn-delete và .btn-lock đã có 
+*/
 .action-btn, .btn-edit, .btn-lock, .btn-delete {
     margin-right: 5px;
     padding: 6px 10px;
@@ -197,7 +200,7 @@ tbody tr:nth-child(even) {
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-margin-top: 30px;
+    margin-top: 30px;
 }
 .chart-title {
     font-size: 1.2rem;
@@ -329,7 +332,10 @@ margin-top: 30px;
     font-size: 1rem;
 }
 
-/* Modal */
+/* Modal CŨ CỦA BẠN 
+   (Tôi sẽ ghi đè .modal-content ở bên dưới 
+   với style chi tiết hơn) 
+*/
 .modal-overlay {
     display: none;
     position: fixed;
@@ -344,14 +350,6 @@ margin-top: 30px;
 
 .modal-overlay:not(.hidden) {
     display: flex;
-}
-
-.modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
-    max-width: 500px;
-    width: 100%;
 }
 
 .close-modal-btn {
@@ -369,4 +367,156 @@ margin-top: 30px;
     cursor: pointer;
     margin-right: 10px;
     margin-bottom: 10px;
+}
+
+
+/* ============================================= */
+/* ===== CÁC CLASS MỚI CHO MODAL TẠO BỘ ĐỀ ===== */
+/* ============================================= */
+
+/* Lớp phủ nền mờ cho modal */
+/* Đây là class cho modal #createProblemModal */
+.modal {
+    display: none; /* Ẩn mặc định */
+    position: fixed; 
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+}
+
+/* GHI ĐÈ .modal-content cũ của bạn */
+/* Style này dành cho cửa sổ modal mới */
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto; /* 5% từ trên xuống và tự động căn giữa */
+    padding: 25px;
+    border: 1px solid #888;
+    width: 60%; /* Rộng 60% màn hình */
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    max-height: 80vh; /* Cao tối đa 80% */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header của Modal */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 15px;
+}
+
+.modal-header h2 {
+    margin: 0;
+}
+
+/* Nút đóng (X) */
+.close-btn {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.close-btn:hover { color: #333; }
+
+/* Thân modal (chứa form) */
+.modal-body {
+    padding-top: 20px;
+    overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
+}
+
+/* Các nhóm trong form */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Quan trọng */
+}
+
+/* Dùng để xếp các input trên 1 hàng */
+.form-row {
+    display: flex;
+    gap: 20px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Khu vực xem trước test case */
+.testcase-preview-area {
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-height: 100px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+/* Chân modal (chứa các nút bấm) */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #ddd;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+/* Nút tạo test case AI */
+#generateTestcaseBtn {
+    margin-top: 10px;
+    background-color: #e0e0e0;
+    color: #333;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+#generateTestcaseBtn:hover {
+    background-color: #d0d0d0;
+}
+
+/* Các nút bấm (Lưu / Hủy) */
+/* (Style này trùng với .report-btn của bạn) */
+.btn-primary {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    background-color: #6c63ff; 
+    color: #fff;
+}
+.btn-secondary {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    background-color: #e9ecef; 
+    color: #333;
 }

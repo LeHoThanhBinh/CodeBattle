@@ -1,0 +1,52 @@
+# File mẫu docker-compose.yml cho Linux (dùng isolate thật)
+# Copy file này thành docker-compose.yml khi chạy trên Linux VM/server
+
+# Phần judge0_server (đã sửa để dùng isolate thật):
+judge0_server:
+  image: judge0/judge0:1.13.0
+  container_name: codebattle-judge0_server
+  privileged: true 
+  restart: always
+  environment:
+    PORT: "2358"
+    RAILS_ENV: production
+    SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
+    RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
+    RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES:-2}
+    WEB_CONCURRENCY: ${WEB_CONCURRENCY}
+    RAILS_SERVE_STATIC_FILES: "true"
+    POSTGRES_HOST: judge0_db
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: ${JUDGE0_DB_NAME}
+    POSTGRES_USER: ${JUDGE0_DB_USER}
+    POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
+    REDIS_HOST: judge0_redis
+    REDIS_PORT: "6379"
+    REDIS_PASSWORD: ${JUDGE0_REDIS_PASS}
+    # ✅ KHÔNG CẦN USE_ISOLATE: "false" - để mặc định dùng isolate thật
+  volumes:
+    - judge0_boxes:/box
+    # ✅ KHÔNG CẦN mount fake-isolate.sh
+  command: bash -c "
+    rm -f /api/tmp/pids/server.pid;
+    export RAILS_MAX_THREADS=${RAILS_MAX_THREADS};
+    export RAILS_SERVER_PROCESSES=${RAILS_SERVER_PROCESSES:-2};
+    export WEB_CONCURRENCY=${WEB_CONCURRENCY};
+    unset DATABASE_URL;
+    echo '🚀 Running database setup for Judge0...';
+    bundle install --quiet;
+    bundle exec rails db:create db:migrate db:seed 2>/dev/null || true;
+    echo '✅ Database ready, starting Judge0 server...';
+    rails server -b 0.0.0.0 -p 2358"
+  ports:
+    - "2358:2358"
+  depends_on:
+    judge0_db:
+      condition: service_healthy
+    judge0_redis:
+      condition: service_healthy
+  networks:
+    - codebattle_net
+
+# Tương tự cho judge0_worker - cũng xóa USE_ISOLATE: "false"
+

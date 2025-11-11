@@ -1,6 +1,6 @@
 services:
   # -------------------------------------
-  #  🗄 Dịch vụ Database (MySQL)
+  # 🗄 Database (MySQL cho Backend)
   # -------------------------------------
   db:
     image: mysql:8.0
@@ -28,7 +28,7 @@ services:
       - codebattle_net
 
   # -------------------------------------
-  #  🔁 Redis (Hàng đợi Celery)
+  # 📝 Redis (Hàng đợi Celery)
   # -------------------------------------
   redis:
     image: redis:7-alpine
@@ -47,11 +47,12 @@ services:
       - codebattle_net
 
   # -------------------------------------
-  #  🧠 Backend (Django + Daphne)
+  # 🧠 Backend (Django + Daphne)
   # -------------------------------------
   backend:
     build:
       context: ./backend
+    image: codebattle-backend-image:latest 
     working_dir: /app
     command: daphne -b 0.0.0.0 -p 8000 code_battle_api.asgi:application
     restart: always
@@ -70,18 +71,15 @@ services:
       - codebattle_net
 
   # -------------------------------------
-  #  ⚙️ Celery Worker (Máy chấm nội bộ)
+  # ⚙️ Celery Worker
   # -------------------------------------
   worker:
-    build:
-      context: ./backend
+    image: codebattle-backend-image:latest
     working_dir: /app
     command: celery -A code_battle_api worker --loglevel=info
     restart: always
     volumes:
       - ./backend:/app
-      # Nếu worker của BẠN cần dùng Docker, hãy giữ dòng này.
-      # Nếu không, hãy xóa nó để tăng bảo mật.
       - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - ./backend/.env
@@ -90,25 +88,22 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      backend:
+        condition: service_started
     networks:
       - codebattle_net
 
   # -------------------------------------
-  #  🖥️ Frontend (React/Vite Dev)
+  # 🖥️ Frontend (React/Vite)
   # -------------------------------------
   frontend:
     image: node:18-alpine
-    # Giả định code frontend nằm trong thư mục ./frontend
     working_dir: /app
     volumes:
       - ./frontend:/app
-      # Dùng volume để cache node_modules, giúp 'npm install' nhanh hơn
       - frontend_node_modules:/app/node_modules
-    # Giả định port 5173 (Vite)
     ports:
       - "5173:5173"
-    # Lệnh để cài đặt và chạy dev server
-    # Cần '--host 0.0.0.0' để expose ra ngoài container
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     networks:
       - codebattle_net
@@ -116,96 +111,142 @@ services:
       - backend
 
   # -------------------------------------
-  #  🧩 Judge0 Database (PostgreSQL)
+  # 🧩 Judge0 Database (PostgreSQL)
   # -------------------------------------
   judge0_db:
     image: postgres:13-alpine
     restart: always
     environment:
-      # Sử dụng biến từ file .env
       POSTGRES_USER: ${JUDGE0_DB_USER}
       POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
       POSTGRES_DB: ${JUDGE0_DB_NAME}
     volumes:
       - judge0_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${JUDGE0_DB_USER} -d ${JUDGE0_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - codebattle_net
 
   # -------------------------------------
-  #  📦 Judge0 Redis
+  # 📦 Judge0 Redis
   # -------------------------------------
   judge0_redis:
     image: redis:7.2.0-alpine
-    # Sử dụng biến từ file .env
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${JUDGE0_REDIS_PASS}"]
     restart: always
     volumes:
       - judge0_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${JUDGE0_REDIS_PASS}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - codebattle_net
 
   # -------------------------------------
-  #  ⚖️ Judge0 API Server (Build từ source)
+  # ⚖️ Judge0 API Server (FIXED - Windows Compatible)
   # -------------------------------------
   judge0_server:
-    build:
-      context: ./judge0
-      dockerfile: Dockerfile
+    image: judge0/judge0:1.13.0
     container_name: codebattle-judge0_server
-    privileged: true # CẦN THIẾT để chạy sandbox 'isolate'
+    privileged: true 
     restart: always
     environment:
-      - PORT=2358
-      - REDIS_HOST=judge0_redis
-      - REDIS_PASSWORD=${JUDGE0_REDIS_PASS} # Thêm mật khẩu Redis
-      # Sửa DATABASE_URL để khớp với credentials của judge0_db
-      - DATABASE_URL=postgresql://${JUDGE0_DB_USER}:${JUDGE0_DB_PASS}@judge0_db:5432/${JUDGE0_DB_NAME}
-      - RAILS_ENV=production
-      - DISABLE_ISOLATE_CGROUPS=true # Thêm cờ fix cgroup v2
-      # ĐÃ XÓA 'ENABLE_SANDBOX=false' -> MẶC ĐỊNH SẼ LÀ TRUE (AN TOÀN)
+      PORT: "2358"
+      RAILS_ENV: production
+      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
+      RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
+      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES:-2}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY}
+      RAILS_SERVE_STATIC_FILES: "true"
+      POSTGRES_HOST: judge0_db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${JUDGE0_DB_NAME}
+      POSTGRES_USER: ${JUDGE0_DB_USER}
+      POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
+      REDIS_HOST: judge0_redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${JUDGE0_REDIS_PASS}
+      USE_ISOLATE: "true"
+    volumes:
+      - judge0_boxes:/box
+      - ./judge0/fake-isolate.sh:/tmp/fake-isolate.sh:ro
+    command: bash -c "
+      rm -f /api/tmp/pids/server.pid;
+      export RAILS_MAX_THREADS=${RAILS_MAX_THREADS};
+      export RAILS_SERVER_PROCESSES=${RAILS_SERVER_PROCESSES:-2};
+      export WEB_CONCURRENCY=${WEB_CONCURRENCY};
+      unset DATABASE_URL;
+      echo '🔧 Installing fake isolate wrapper (no sandbox mode)...';
+      cp /tmp/fake-isolate.sh /usr/local/bin/isolate;
+      chmod +x /usr/local/bin/isolate;
+      echo '✅ Fake isolate wrapper installed';
+      echo '🚀 Running database setup for Judge0...';
+      bundle install --quiet;
+      bundle exec rails db:create db:migrate db:seed 2>/dev/null || true;
+      echo '✅ Database ready, starting Judge0 server...';
+      rails server -b 0.0.0.0 -p 2358"
     ports:
       - "2358:2358"
     depends_on:
-      - judge0_db
-      - judge0_redis
+      judge0_db:
+        condition: service_healthy
+      judge0_redis:
+        condition: service_healthy
     networks:
       - codebattle_net
 
   # -------------------------------------
-  #  ⚖️ Judge0 Worker (Build từ source)
+  # ⚖️ Judge0 Worker (FIXED - Windows Compatible)
   # -------------------------------------
   judge0_worker:
-    build:
-      context: ./judge0
-      dockerfile: Dockerfile
+    image: judge0/judge0:1.13.0
     container_name: codebattle-judge0_worker
-    privileged: true # CẦN THIẾT để chạy sandbox 'isolate'
+    privileged: true
     restart: always
     environment:
-      - WORKER=true
-      - REDIS_HOST=judge0_redis
-      - REDIS_PASSWORD=${JUDGE0_REDIS_PASS} # Thêm mật khẩu Redis
-      # Sửa DATABASE_URL để khớp với credentials của judge0_db
-      - DATABASE_URL=postgresql://${JUDGE0_DB_USER}:${JUDGE0_DB_PASS}@judge0_db:5432/${JUDGE0_DB_NAME}
-      - RAILS_ENV=production
-      - DISABLE_ISOLATE_CGROUPS=true # Thêm cờ fix cgroup v2
+      WORKER: "true"
+      RAILS_ENV: production
+      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
+      RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
+      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES:-2}
+      POSTGRES_HOST: judge0_db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${JUDGE0_DB_NAME}
+      POSTGRES_USER: ${JUDGE0_DB_USER}
+      POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
+      REDIS_HOST: judge0_redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${JUDGE0_REDIS_PASS}
+      USE_ISOLATE: "true"
+    volumes:
+      - judge0_boxes:/box
     depends_on:
-      - judge0_server # Worker nên khởi động sau server
+      judge0_db:
+        condition: service_healthy
+      judge0_redis:
+        condition: service_healthy
+      judge0_server:
+        condition: service_started
     networks:
       - codebattle_net
 
-# =====================================
-# 📦 Dữ liệu lưu trữ & mạng nội bộ
-# =====================================
+# -------------------------------------
+# 📦 Dữ liệu & Mạng
+# -------------------------------------
 volumes:
   db_data:
   redis_data:
   judge0_postgres_data:
   judge0_redis_data:
-  frontend_node_modules: # <-- Đã thêm volume cho frontend
+  judge0_boxes:
+  frontend_node_modules:
 
 networks:
   codebattle_net:
     driver: bridge
     name: codebattle_network
-

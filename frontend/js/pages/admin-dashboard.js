@@ -7,14 +7,14 @@ let reportActivityChart = null;
 
 export function initAdminDashboardPage(router) {
     console.log("Admin Dashboard Initialized");
-    setupModalListeners();
+    
+    setupModalListeners(); 
     setupTableListeners();
     setupUserTableListeners();
     setupFilterListeners();
     setupNavigationListeners();
     connectToAdminStatsSocket();
     setupReportFilters(); 
-    fetchAdminStats(); 
 }
 
 function setupNavigationListeners() {
@@ -33,13 +33,12 @@ function setupNavigationListeners() {
             if (targetSection) {
                 targetSection.classList.add('active');
                 
-                // Tải dữ liệu dựa trên tab được nhấp
-                if (targetSectionId === 'dashboard') { // [TỐI ƯU]
+                if (targetSectionId === 'dashboard') {
                     fetchAdminStats();
                 } else if (targetSectionId === 'users') {
                     fetchUsers().then(() => setupUserTableListeners());
                 } else if (targetSectionId === 'exams') {
-                    fetchExams();
+                    fetchExams(); // <-- Sửa ở đây
                 } else if (targetSectionId === 'monitor') {
                     fetchMonitorData();
                 } else if (targetSectionId === 'reports') {
@@ -49,25 +48,21 @@ function setupNavigationListeners() {
         });
     });
     
-    // [TỐI ƯU] Tải dữ liệu cho tab đang active khi tải trang
-    // Thay vì luôn gọi fetchAdminStats, hãy kiểm tra xem tab nào đang active
     const activeMenuItem = document.querySelector('.menu-item.active');
     if (activeMenuItem) {
         const activeSectionId = activeMenuItem.getAttribute('data-target');
-        // Kích hoạt logic tải dữ liệu cho tab active
         if (activeSectionId === 'dashboard') {
             fetchAdminStats();
         } else if (activeSectionId === 'users') {
             fetchUsers().then(() => setupUserTableListeners());
         } else if (activeSectionId === 'exams') {
-            fetchExams();
+            fetchExams(); // <-- Sửa ở đây
         } else if (activeSectionId === 'monitor') {
             fetchMonitorData();
         } else if (activeSectionId === 'reports') {
             fetchReportData();
         }
     } else {
-        // Fallback: Nếu không có gì active, tải dashboard
         fetchAdminStats();
     }
 }
@@ -85,13 +80,10 @@ function setupReportFilters() {
 async function fetchReportData() {
     console.log("Đang tải dữ liệu Báo cáo...");
 
-    // [SỬA LỖI] - Kiểm tra các phần tử này trước khi dùng
     const reportTypeEl = document.getElementById('reportType');
     const timeRangeEl = document.getElementById('timeRange');
     
-    // Nếu không tìm thấy (vì đang ở tab khác), thì không làm gì cả
     if (!reportTypeEl || !timeRangeEl) {
-        // console.warn("Không tìm thấy bộ lọc báo cáo trên trang này.");
         return; 
     }
     
@@ -145,12 +137,10 @@ async function fetchReportData() {
     }
 }
 
-// [SỬA LỖI] - Hàm này là nguyên nhân chính gây lỗi
 async function fetchAdminStats() {
     try {
+        // URL này vẫn đúng vì ta giữ nó trong code_battle_api/urls.py
         const stats = await apiFetch('/api/admin/stats/');
-        
-        // [SỬA LỖI] Bọc các dòng gán .textContent trong kiểm tra 'if'
         
         const totalUsersEl = document.getElementById('adminTotalUsersStat');
         if (totalUsersEl) {
@@ -167,7 +157,6 @@ async function fetchAdminStats() {
             totalExamsEl.textContent = stats.total_exams;
         }
 
-        // Đây là thẻ mới chúng ta vừa thêm ở Bước 1
         const matchesTodayEl = document.getElementById('adminMatchesTodayStat');
         if (matchesTodayEl) {
             matchesTodayEl.textContent = stats.matches_today;
@@ -183,6 +172,7 @@ async function fetchUsers() {
     if (!tableBody) return;
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem;">Đang tải dữ liệu...</td></tr>';
     try {
+        // URL này vẫn đúng
         const users = await apiFetch('/api/admin/users/');
         if (users.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem;">Không có người dùng nào.</td></tr>';
@@ -211,12 +201,20 @@ async function fetchExams() {
     if (!tableBody) return;
     tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1rem;">Đang tải dữ liệu...</td></tr>';
     try {
-        const exams = await apiFetch('/api/admin/exams/');
+        
+        // ===========================================
+        // ===== SỬA LỖI (1) =====
+        // ===========================================
+        // const exams = await apiFetch('/api/admin/exams/');
+        const exams = await apiFetch('/api/problems/'); // URL MỚI
+
         if (exams.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1rem;">Không có bộ đề nào.</td></tr>';
             return;
         }
         tableBody.innerHTML = exams.map(exam => {
+            // (Lưu ý: API mới trả về 'title' và 'difficulty' (số), không phải 'name' và 'level' (chữ))
+            // (Chúng ta sẽ sửa logic hiển thị sau nếu cần)
             const statusClass = exam.is_active ? 'status-active' : 'status-locked';
             const statusText = exam.is_active ? 'Active' : 'Locked';
             const lockBtnClass = exam.is_active ? 'active' : 'locked';
@@ -224,9 +222,9 @@ async function fetchExams() {
             return `
                 <tr data-id="${exam.id}">
                     <td data-label="ID">${exam.id}</td>
-                    <td data-label="Tên bộ đề">${exam.name}</td>
-                    <td data-label="Cấp độ">${exam.level}</td>
-                    <td data-label="Số câu hỏi">${exam.question_count}</td>
+                    <td data-label="Tên bộ đề">${exam.title}</td> 
+                    <td data-label="Cấp độ">${exam.difficulty}</td>
+                    <td data-label="Số câu hỏi">1</td>
                     <td data-label="Trạng thái"><span class="status ${statusClass}">${statusText}</span></td>
                     <td class="actions-col" data-label="Thao tác">
                         <button class="btn-edit">Edit</button>
@@ -242,26 +240,22 @@ async function fetchExams() {
     }
 }
 
-// [SỬA LỖI] - Hàm này cũng có nguy cơ bị lỗi tương tự
 async function fetchMonitorData() {
+    // ... (Không thay đổi)
     console.log("Đang tải dữ liệu giám sát...");
 
-    // [SỬA LỖI] Tạo biến cho các phần tử
     const uptimeEl = document.getElementById('monitorUptimeStat');
     const onlineUsersEl = document.getElementById('monitorOnlineUsersStat');
     const matchesEl = document.getElementById('monitorMatchesInProgressStat');
     const latencyEl = document.getElementById('monitorAvgLatencyStat');
 
-    // Nếu không có phần tử nào (đang ở tab khác), thì không làm gì cả
     if (!uptimeEl && !onlineUsersEl && !matchesEl && !latencyEl) {
-        // console.warn("Không tìm thấy các phần tử giám sát trên trang này.");
         return;
     }
 
     try {
         const stats = await apiFetch('/api/admin/monitor-stats/');
         
-        // [SỬA LỖI] Kiểm tra trước khi gán
         if (uptimeEl) uptimeEl.textContent = stats.uptime;
         if (onlineUsersEl) onlineUsersEl.textContent = stats.online_users;
         if (matchesEl) matchesEl.textContent = stats.matches_in_progress;
@@ -270,14 +264,12 @@ async function fetchMonitorData() {
     } catch (error) {
         console.error("Lỗi khi tải thống kê giám sát:", error);
         
-        // [SỬA LỖI] Kiểm tra trong cả khối 'catch'
         if (uptimeEl) uptimeEl.textContent = "Lỗi";
         if (onlineUsersEl) onlineUsersEl.textContent = "Lỗi";
         if (matchesEl) matchesEl.textContent = "Lỗi";
         if (latencyEl) latencyEl.textContent = "Lỗi";
     }
 
-    // Phần còn lại của hàm (tải log)
     const logTableBody = document.getElementById('activityLogTableBody');
     if (!logTableBody) return;
     logTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 1rem;">Đang tải nhật ký...</td></tr>';
@@ -315,7 +307,6 @@ async function fetchMonitorData() {
         logTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 1rem; color: red;">Lỗi khi tải nhật ký!</td></tr>';
     }
     
-    // Tải biểu đồ
     try {
         const chartData = await apiFetch('/api/admin/activity-chart/');
         if (userActivityChart) {
@@ -337,43 +328,165 @@ async function fetchMonitorData() {
     }
 }
 
-// 
-// CÁC HÀM BÊN DƯỚI GIỮ NGUYÊN
-// 
+
 function setupModalListeners() {
-    const createModal = document.getElementById('createModal');
-    const importModal = document.getElementById('importModal');
-    const showCreateModalBtn = document.getElementById('showCreateModalBtn');
-    const showImportModalBtn = document.getElementById('showImportModalBtn');
-    const closeModalBtns = document.querySelectorAll('.close-modal-btn');
-    if (showCreateModalBtn && createModal) {
-        showCreateModalBtn.addEventListener('click', () => {
-            createModal.classList.remove('hidden');
+    // --- Lấy các phần tử DOM của modal ---
+    const modal = document.getElementById('createProblemModal');
+    const openBtn = document.getElementById('showCreateModalBtn');
+    const closeBtn = document.getElementById('closeCreateModalBtn');
+    const cancelBtn = document.getElementById('cancelCreateBtn');
+    const form = document.getElementById('createProblemForm');
+    const aiBtn = document.getElementById('generateTestcaseBtn');
+    const previewArea = document.getElementById('testcasePreviewArea');
+
+    const titleEl = document.getElementById('problemTitle');
+    const descEl = document.getElementById('problemDescription');
+    const diffEl = document.getElementById('problemDifficulty');
+    const timeEl = document.getElementById('problemTimeLimit');
+    const memEl = document.getElementById('problemMemoryLimit');
+    
+    let generatedTestCases = [];
+
+    const resetModal = () => {
+        if (form) form.reset();
+        generatedTestCases = [];
+        if (previewArea) previewArea.innerHTML = '<p>Chưa có test case nào...</p>';
+        
+        if (aiBtn) {
+            aiBtn.disabled = false;
+            aiBtn.textContent = 'Tạo Test Case bằng AI';
+        }
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Lưu Bộ đề';
+        }
+    };
+
+    const closeModal = () => {
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    if (openBtn && modal) {
+        openBtn.addEventListener('click', () => {
+            resetModal();
+            modal.style.display = 'block';
         });
     }
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
+
+    if (aiBtn && descEl && previewArea) {
+        aiBtn.addEventListener('click', async () => {
+            const description = descEl.value;
+            if (!description.trim()) {
+                alert("Vui lòng nhập mô tả bài toán trước khi tạo test case.");
+                return;
+            }
+            
+            aiBtn.disabled = true;
+            aiBtn.textContent = 'Đang tạo...';
+            previewArea.innerHTML = '<p>Đang liên hệ với AI, vui lòng chờ...</p>';
+
+            try {
+                // URL này đã đúng từ trước
+                const response = await apiFetch('/api/generate-testcases/', { 
+                    method: 'POST',
+                    body: JSON.stringify({ description: description }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.test_cases || response.test_cases.length === 0) {
+                    throw new Error("AI không trả về test case nào.");
+                }
+
+                generatedTestCases = response.test_cases; 
+                
+                previewArea.innerHTML = generatedTestCases.map((tc, index) => `
+                    <div class="testcase-item" style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px;">
+                        <strong>Test Case ${index + 1} ${tc.is_hidden ? '(Hidden)' : '(Sample)'}</strong>
+                        <p style="margin: 0; font-family: monospace; background: #fafafa; padding: 2px 5px;"><strong>Input:</strong> ${tc.input.replace(/\n/g, '<br>')}</p>
+                        <p style="margin: 0; font-family: monospace; background: #fafafa; padding: 2px 5px;"><strong>Output:</strong> ${tc.output.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error("Lỗi khi tạo test case bằng AI:", error);
+                previewArea.innerHTML = `<p style="color: red;">Lỗi khi tạo test case: ${error.message}</p>`;
+                generatedTestCases = [];
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.textContent = 'Tạo Test Case bằng AI';
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            if (generatedTestCases.length === 0) {
+                alert("Vui lòng tạo test case trước khi lưu.");
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Đang lưu...';
+
+            const problemData = {
+                title: titleEl.value,
+                description: descEl.value,
+                difficulty: parseInt(diffEl.value, 10),
+                time_limit: parseInt(timeEl.value, 10), 
+                memory_limit: parseInt(memEl.value, 10),
+                test_cases: generatedTestCases
+            };
+
+            try {
+                // ===========================================
+                // ===== SỬA LỖI (2) =====
+                // ===========================================
+                // await apiFetch('/api/admin/exams/', { 
+                await apiFetch('/api/problems/', { // URL MỚI
+                    method: 'POST',
+                    body: JSON.stringify(problemData),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                closeModal(); 
+                fetchExams(); // Tải lại bảng
+
+            } catch (error) {
+                console.error("Lỗi khi lưu bộ đề:", error);
+                alert(`Không thể lưu bộ đề: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Lưu Bộ đề';
+            }
+        });
+    }
+    
+    const importModal = document.getElementById('importModal');
+    const showImportModalBtn = document.getElementById('showImportModalBtn');
     if (showImportModalBtn && importModal) {
         showImportModalBtn.addEventListener('click', () => {
-            importModal.classList.remove('hidden');
+            alert("Chức năng Import chưa được cài đặt.");
         });
     }
-    closeModalBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (createModal) createModal.classList.add('hidden');
-            if (importModal) importModal.classList.add('hidden');
-        });
-    });
-    function closeModalOnClickOutside(modal) {
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-overlay')) {
-                    modal.classList.add('hidden');
-                }
-            });
-        }
-    }
-    closeModalOnClickOutside(createModal);
-    closeModalOnClickOutside(importModal);
 }
+
+
 function setupTableListeners() {
     const tableBody = document.getElementById('examTableBody');
     if (tableBody) {
@@ -381,12 +494,18 @@ function setupTableListeners() {
             const target = event.target;
             const row = target.closest('tr');
             if (!row) return;
-            const examId = row.dataset.id;
+            const examId = row.dataset.id; // Lấy ID (ví dụ: 1, 2, 3...)
+
+            // Xử lý nút XÓA (DELETE)
             if (target.classList.contains('btn-delete')) {
                 if (confirm('Bạn có chắc chắn muốn xóa bộ đề này không?')) {
                     console.log('Xóa bộ đề ID:', examId);
                     try {
-                        await apiFetch(`/api/admin/exams/${examId}/`, {
+                        // ===========================================
+                        // ===== SỬA LỖI (3) =====
+                        // ===========================================
+                        // await apiFetch(`/api/admin/exams/${examId}/`, {
+                        await apiFetch(`/api/problems/${examId}/`, { // URL MỚI
                             method: 'DELETE'
                         });
                         row.remove();
@@ -396,19 +515,28 @@ function setupTableListeners() {
                     }
                 }
             }
+            
+            // Xử lý nút KHÓA (PATCH)
             if (target.classList.contains('btn-lock')) {
                 const statusSpan = row.querySelector('.status');
                 const isLocked = target.classList.contains('locked');
-                const newActiveState = isLocked;
+                const newActiveState = isLocked; // locked=true -> new_state=true
+                
                 console.log('Thay đổi trạng thái bộ đề ID:', examId, 'to', newActiveState ? 'Active' : 'Locked');
                 try {
-                    await apiFetch(`/api/admin/exams/${examId}/`, {
+                    // ===========================================
+                    // ===== SỬA LỖI (4) =====
+                    // ===========================================
+                    // await apiFetch(`/api/admin/exams/${examId}/`, {
+                    await apiFetch(`/api/problems/${examId}/`, { // URL MỚI
                         method: 'PATCH',
                         body: JSON.stringify({ is_active: newActiveState }),
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     });
+                    
+                    // Cập nhật UI
                     if (isLocked) {
                         statusSpan.textContent = 'Active';
                         statusSpan.className = 'status status-active';
@@ -425,13 +553,17 @@ function setupTableListeners() {
                     alert("Không thể cập nhật trạng thái. Vui lòng thử lại.");
                 }
             }
+            
+            // Xử lý nút SỬA (EDIT)
             if (target.classList.contains('btn-edit')) {
                 console.log('Chỉnh sửa bộ đề ID:', examId);
+                alert("Chức năng Edit chưa được cài đặt.");
             }
         });
     }
 }
 function setupUserTableListeners() {
+    // ... (Không thay đổi)
     const tableBody = document.getElementById('userTableBody');
     if (tableBody) {
         tableBody.addEventListener('click', async (event) => {
@@ -443,6 +575,7 @@ function setupUserTableListeners() {
                 if (confirm('Bạn có chắc chắn muốn xóa người dùng này không?')) {
                     console.log('Xóa người dùng ID:', userId);
                     try {
+                        // URL này vẫn đúng
                         await apiFetch(`/api/admin/users/${userId}/`, {
                             method: 'DELETE'
                         });
@@ -455,11 +588,13 @@ function setupUserTableListeners() {
             }
             if (target.classList.contains('action-btn') && target.classList.contains('edit')) {
                 console.log('Chỉnh sửa người dùng ID:', userId);
+                alert("Chức năng Edit chưa được cài đặt.");
             }
         });
     }
 }
 function setupFilterListeners() {
+    // ... (Không thay đổi)
     const levelFilter = document.getElementById('levelFilter');
     const tableBody = document.getElementById('examTableBody');
     if (levelFilter && tableBody) {
@@ -467,7 +602,7 @@ function setupFilterListeners() {
             const selectedLevel = event.target.value;
             const rows = tableBody.querySelectorAll('tr');
             rows.forEach(row => {
-                const levelCell = row.cells[2];
+                const levelCell = row.cells[2]; 
                 if (levelCell) {
                     row.style.display = (selectedLevel === "" || levelCell.textContent === selectedLevel) ? '' : 'none';
                 }
@@ -476,12 +611,10 @@ function setupFilterListeners() {
     }
 }
 
-/**
- * Mở WebSocket cho trang admin để nhận cập nhật real-time.
- */
 function connectToAdminStatsSocket() {
+    // ... (Không thay đổi)
     const token = getAccessToken();
-    if (!token) return; // Không thể kết nối nếu không phải admin
+    if (!token) return; 
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/admin/dashboard/`;
@@ -490,7 +623,6 @@ function connectToAdminStatsSocket() {
 
     adminSocket.onopen = () => {
         console.log("Kết nối Admin Stats thành công.");
-        // Gửi token để xác thực
         adminSocket.send(JSON.stringify({
             "type": "auth",
             "token": token
@@ -503,22 +635,18 @@ function connectToAdminStatsSocket() {
         if (data.type === 'stats_update' && data.active_users !== undefined) {
             console.log("Nhận cập nhật stats:", data.active_users);
 
-            // Cập nhật thẻ "Người dùng hoạt động"
             const activeUsersEl = document.getElementById('adminActiveUsersStat');
             if (activeUsersEl) {
                 activeUsersEl.textContent = data.active_users;
             }
-
-            // Cập nhật thẻ "Trạng thái" trong bảng Quản lý Người dùng
-            // (Code này hơi phức tạp, chúng ta sẽ làm sau nếu bạn muốn)
         } else if (data.type === 'error') {
             console.error("Lỗi từ Admin WS:", data.message);
         }
     };
 
+
     adminSocket.onclose = () => {
         console.log("Kết nối Admin Stats bị ngắt.");
-        // Có thể thêm logic tự động kết nối lại ở đây
     };
 
     adminSocket.onerror = (e) => {

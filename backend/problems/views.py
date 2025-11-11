@@ -1,15 +1,26 @@
-from .models import Problem
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import generics
+# File: backend/problems/views.py (Đã sửa)
+
+import google.generativeai as genai
+import json
+from django.conf import settings
+
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from .models import Problem
 from .serializers import ProblemSerializer
 
+# ===================================================================
+# ===== CÁC VIEW CRUD (GIỮ NGUYÊN) =====
+# ===================================================================
+
 class ProblemListCreateView(generics.ListCreateAPIView):
-    queryset = Problem.objects.all()
+    """
+    GET: Trả về danh sách các bài toán (chỉ những bài 'active').
+    POST: Tạo một bài toán mới (và các test case đi kèm).
+    """
+    queryset = Problem.objects.filter(is_active=True)
     serializer_class = ProblemSerializer
 
     def get_permissions(self):
@@ -21,49 +32,87 @@ class ProblemListCreateView(generics.ListCreateAPIView):
         serializer.save(created_by=self.request.user)
 
 class ProblemDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET: Lấy chi tiết 1 bài toán.
+    PUT/PATCH: Cập nhật 1 bài toán.
+    DELETE: Xóa 1 bài toán.
+    """
     queryset = Problem.objects.all()
     serializer_class = ProblemSerializer
     permission_classes = [IsAdminUser] 
     lookup_field = 'pk'
 
-@api_view(['GET'])
-@permission_classes([IsAdminUser])
-def admin_get_problems(request):
-    try:
-        problems = Problem.objects.all()
-        data = []
-        for problem in problems:
-            data.append({
-                'id': problem.id, 
-                'name': problem.title, 
-                'level': problem.difficulty, 
-                'question_count': 1, 
-                'is_active': problem.is_active
-            })
-        return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+# ===============================================
+# ===== VIEW GỌI AI (ĐÃ CẬP NHẬT MODEL NAME) =====
+# ===============================================
 
-@api_view(['DELETE'])
-@permission_classes([IsAdminUser])
-def admin_delete_problem(request, problem_id):
-    try:
-        problem = Problem.objects.get(id=problem_id)
-        problem.delete()
-        return Response({'message': 'Bộ đề đã được xóa'}, status=status.HTTP_200_OK)
-    except Problem.DoesNotExist:
-        return Response({'error': 'Không tìm thấy bộ đề'}, status=status.HTTP_404_NOT_FOUND)
+class GenerateTestCasesView(APIView):
+    """
+    API View này (chỉ POST) nhận 'description'
+    và gọi API Google Gemini để tạo ra các test case.
+    """
+    permission_classes = [IsAdminUser]
 
-@api_view(['PATCH'])
-@permission_classes([IsAdminUser])
-def admin_update_problem_status(request, problem_id):
-    try:
-        problem = Problem.objects.get(id=problem_id)
-        is_active = request.data.get('is_active')
-        problem.is_active = is_active 
-        problem.save()
-        return Response({'message': 'Cập nhật thành công'}, status=status.HTTP_200_OK)
-    except Problem.DoesNotExist:
-        return Response({'error': 'Không tìm thấy bộ đề'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def post(self, request, *args, **kwargs):
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            return Response(
+                {"error": "GEMINI_API_KEY chưa được cấu hình trên server."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        try:
+            genai.configure(api_key=api_key)
+        except Exception as e:
+            return Response(
+                {"error": f"Lỗi khi cấu hình Gemini (API Key có thể sai): {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        description = request.data.get('description')
+        if not description:
+            return Response(
+                {"error": "Vui lòng nhập mô tả bài toán."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        prompt = f"""
+        Bạn là một chuyên gia ra đề thi lập trình.
+        Dựa trên mô tả bài toán dưới đây, hãy tạo 10 test case (2 mẫu, 8 ẩn).
+        Mô tả bài toán:
+        {description}
+
+        Chỉ trả lời bằng một đối tượng JSON có cấu trúc chính xác như sau:
+        {{"test_cases": [{{"input": "...", "output": "...", "is_hidden": false}}, ...]}}
+        """
+
+        generation_config = {
+            "response_mime_type": "application/json",
+        }
+        
+        try:
+            # =============================================
+            # ===== ĐÂY LÀ DÒNG THAY ĐỔI DUY NHẤT =====
+            # =============================================
+            model = genai.GenerativeModel(
+                'gemini-2.5-flash', 
+                generation_config=generation_config
+            )
+            response = model.generate_content(prompt)
+            
+            json_response = json.loads(response.text) 
+
+            return Response(json_response, status=status.HTTP_200_OK)
+
+        except json.JSONDecodeError:
+            return Response(
+                {"error": "Gemini trả về dữ liệu không phải JSON. Vui lòng thử lại."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            # In ra lỗi chi tiết để debug
+            print(f"[GEMINI API ERROR]: {str(e)}") 
+            return Response(
+                {"error": f"Lỗi không xác định từ Gemini API: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
