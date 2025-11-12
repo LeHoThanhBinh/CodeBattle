@@ -11,7 +11,7 @@ export function setupDashboardSocket(onMessageCallback) {
         return null;
     }
 
-    const socketUrl = `ws://127.0.0.1:8000/ws/dashboard/?token=${token}`;
+    const socketUrl = `ws://localhost:8000/ws/dashboard/?token=${token}`;
     const socket = new WebSocket(socketUrl);
 
     socket.onopen = () => {
@@ -50,7 +50,7 @@ export function setupBattleSocket(matchId, onMessageCallback) {
     }
 
     // Kết nối tới kênh battle riêng của từng match
-    const socketUrl = `ws://127.0.0.1:8000/ws/matches/${matchId}/?token=${token}`;
+    const socketUrl = `ws://localhost:8000/ws/matches/${matchId}/?token=${token}`;
     const socket = new WebSocket(socketUrl);
 
     socket.onopen = () => {

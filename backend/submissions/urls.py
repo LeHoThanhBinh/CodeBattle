@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import SubmissionCreateView
+from .views import SubmissionAPIView, SubmissionDetailAPIView  # ✅ thêm class mới
 
 urlpatterns = [
-    path('submissions/', SubmissionCreateView.as_view(), name='create-submission'),
+    path('submissions/', SubmissionAPIView.as_view(), name='submission-create'),
+    path('submissions/<int:submission_id>/', SubmissionDetailAPIView.as_view(), name='submission-detail'),  # ✅ thêm dòng này
 ]

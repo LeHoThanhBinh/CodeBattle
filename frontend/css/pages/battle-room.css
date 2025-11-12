@@ -262,3 +262,42 @@
   margin-top: 2rem;
   font-style: italic;
 }
+/* ===========================
+   📊 Detailed Results Table
+=========================== */
+
+.detailed-results {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+  font-size: 0.9em;
+  color: #e2e8f0;
+}
+
+.detailed-results th, .detailed-results td {
+  border: 1px solid #334155;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.detailed-results th {
+  background-color: #1e293b;
+  color: #38bdf8;
+}
+
+.detailed-results td pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detailed-results td.ok {
+  color: #10B981; /* xanh lục: passed */
+  font-weight: bold;
+}
+
+.detailed-results td.fail {
+  color: #EF4444; /* đỏ: failed */
+  font-weight: bold;
+}

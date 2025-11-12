@@ -1,31 +1,21 @@
 # backend/submissions/views.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import Submission, Match
-from .serializers import SubmissionSerializer
-from .tasks import judge_task # <<< BỔ SUNG: Import task
+from rest_framework import status
+from .models import Submission
+from .serializers import SubmissionCreateSerializer, SubmissionResultSerializer
+from .tasks import judge_task
 
-class SubmissionAPIView(APIView):
+class SubmissionDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        # ... (logic validate dữ liệu của bạn)
-        
-        # 1. Tạo một bản ghi Submission với trạng thái 'PENDING'
-        submission = Submission.objects.create(
-            user=request.user,
-            match_id=request.data.get('match_id'),
-            problem_id=request.data.get('problem_id'),
-            language=request.data.get('language'),
-            source_code=request.data.get('source_code'),
-            status='PENDING' # Trạng thái chờ chấm
-        )
+    def get(self, request, submission_id):
+        try:
+            submission = Submission.objects.get(id=submission_id, user=request.user)
+        except Submission.DoesNotExist:
+            return Response({"error": "Submission not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 2. Đẩy nhiệm vụ vào hàng đợi Celery
-        # .delay() sẽ gửi task đi ngay lập tức mà không cần chờ
-        judge_task.delay(submission.id)
+        serializer = SubmissionResultSerializer(submission)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Trả về phản hồi ngay cho người dùng
-        return Response({'message': 'Submission received and is being judged.', 'submission_id': submission.id}, status=202)

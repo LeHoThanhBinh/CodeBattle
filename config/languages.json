@@ -1,0 +1,6 @@
+[
+  { "id": 71, "key": "python", "label": "Python 3.10" },
+  { "id": 63, "key": "javascript", "label": "JavaScript (Node.js 18)" },
+  { "id": 50, "key": "c", "label": "C (GCC 9.2.0)" },
+  { "id": 54, "key": "cpp", "label": "C++ (GCC 9.2.0)" }
+]
