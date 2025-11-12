@@ -1,4 +1,3 @@
-# backend/submissions/tasks.py
 from celery import shared_task
 from django.utils import timezone
 from .models import Submission
@@ -30,55 +29,63 @@ def judge_task(submission_id):
         total_time = 0.0
         total_memory = 0
 
+        # 🚀 Duyệt từng test case và chấm bằng Judge0
         for tc in testcases:
             result = run_code_with_judge0(
                 source_code=submission.source_code,
                 language=submission.language,
-                input_data=tc.input_data,
-                expected_output=tc.expected_output
+                input_data=(tc.input_data or "").strip() + "\n",
+                expected_output=(tc.expected_output or "").strip()
             )
 
-            # Chuẩn hóa kết quả
+            # Lấy thông tin từ Judge0
             status = result.get("status", {}) or {}
             status_desc = status.get("description", "Unknown")
-            status_id = status.get("id")  # 3 = Accepted theo Judge0
+            status_id = status.get("id")  # 3 = Accepted (Judge0)
 
             stdout = (result.get("stdout") or "").strip()
             stderr = (result.get("stderr") or "").strip()
-            compile_output = result.get("compile_output", "")
+            compile_output = (result.get("compile_output") or "").strip()
             exec_time = float(result.get("time") or 0)
             memory = int(result.get("memory") or 0)
 
-            # Passed khi Accepted + stdout khớp expected
-            is_passed = (status_id == 3 and stdout == (tc.expected_output or "").strip())
+            # Chuẩn hóa dữ liệu để so sánh chính xác
+            expected = (tc.expected_output or "").strip()
+            actual = (stdout or "").strip()
+
+            # So sánh theo Judge0 + whitespace
+            is_passed = (status_id == 3 and actual == expected)
             if is_passed:
                 passed += 1
 
             total_time += exec_time
             total_memory += memory
 
+            # Lưu chi tiết kết quả test case
             details.append({
                 "testcase_id": tc.id,
-                "status": status_desc,
-                "stdout": stdout,
+                "input": tc.input_data,
+                "expected_output": expected,
+                "actual_output": actual,
+                "status": "PASS ✅" if is_passed else "FAIL ❌",
                 "stderr": stderr if stderr else compile_output,
-                "expected_output": (tc.expected_output or "").strip(),
-                "passed": is_passed,
                 "exec_time": exec_time,
                 "memory": memory,
             })
 
-        # an toàn khi chia
+        # 🧮 Tính trung bình
         successful_runs = sum(1 for d in details if d.get("exec_time", 0) > 0)
         avg_time = round(total_time / successful_runs, 3) if successful_runs else 0
         avg_mem = round(total_memory / successful_runs) if successful_runs else 0
 
+        # ✅ Xác định trạng thái cuối cùng
         final_status = (
             Submission.SubmissionStatus.ACCEPTED
             if passed == total and total > 0
             else Submission.SubmissionStatus.WRONG_ANSWER
         )
 
+        # Lưu kết quả submission
         submission.status = final_status
         submission.total_test_cases = total
         submission.test_cases_passed = passed
@@ -87,20 +94,23 @@ def judge_task(submission_id):
         submission.detailed_results = details
         submission.save()
 
-        # 📡 Broadcast submission_update
+        # 📡 Gửi realtime event: submission_update
         channel_layer = get_channel_layer()
         match_group_name = f"match_{submission.match.id}"
         async_to_sync(channel_layer.group_send)(
             match_group_name,
             {
                 "type": "submission_update",
-                "payload": submission.summary,  # models.Submission.summary
+                "payload": {
+                    **submission.summary,
+                    "detailed_results": submission.detailed_results,
+                },
             },
         )
 
-        # 🏁 Nếu cả 2 người đã nộp: quyết định người thắng và broadcast match_end
+        # 🏁 Nếu cả hai người chơi đã nộp bài → xác định người thắng
         match = submission.match
-        submissions = list(match.submissions.all()[:2])  # lấy 2 bản nộp đầu
+        submissions = list(match.submissions.all()[:2])
         if len(submissions) == 2:
             s1, s2 = submissions
             if s1.test_cases_passed > s2.test_cases_passed:
@@ -117,7 +127,7 @@ def judge_task(submission_id):
             async_to_sync(channel_layer.group_send)(
                 match_group_name,
                 {
-                    "type": "match_end",  # snake_case để Channels map -> def match_end(self, event)
+                    "type": "match_end",
                     "payload": {
                         "winner_username": match.winner.username if match.winner else None,
                         "reason": "Both players have submitted."

@@ -187,23 +187,16 @@
 }
 
 /* ===========================
-   🏆 Battle Result Overlay (ĐÃ THÊM)
+   🏆 Battle Result Overlay
 =========================== */
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 @keyframes slideIn {
-  from { 
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .battle-result-overlay {
@@ -212,7 +205,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(18, 24, 38, 0.8); /* #121826 with 80% opacity */
+  background: rgba(18, 24, 38, 0.8);
   backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
@@ -222,14 +215,14 @@
 }
 
 .battle-result-box {
-  background: #1e293b; /* Same as panels */
+  background: #1e293b;
   padding: 2.5rem 3rem;
   border-radius: 16px;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   border: 1px solid #334155;
   animation: slideIn 0.4s ease-out;
-  animation-fill-mode: backwards; /* Start animation from 'from' state */
+  animation-fill-mode: backwards;
 }
 
 .battle-result-box h1 {
@@ -238,17 +231,9 @@
   margin-bottom: 1rem;
 }
 
-.battle-result-box h1.win {
-  color: #10B981; /* Green */
-}
-
-.battle-result-box h1.lose {
-  color: #EF4444; /* Red */
-}
-
-.battle-result-box h1.draw {
-  color: #94a3b8; /* Gray */
-}
+.battle-result-box h1.win { color: #10B981; }
+.battle-result-box h1.lose { color: #EF4444; }
+.battle-result-box h1.draw { color: #94a3b8; }
 
 .battle-result-box p {
   font-size: 1.1rem;
@@ -258,14 +243,14 @@
 
 .battle-result-box .redirect-message {
   font-size: 0.9rem;
-  color: #64748B; /* Darker gray */
+  color: #64748B;
   margin-top: 2rem;
   font-style: italic;
 }
+
 /* ===========================
    📊 Detailed Results Table
 =========================== */
-
 .detailed-results {
   width: 100%;
   border-collapse: collapse;
@@ -293,11 +278,47 @@
 }
 
 .detailed-results td.ok {
-  color: #10B981; /* xanh lục: passed */
+  color: #10B981;
   font-weight: bold;
 }
 
 .detailed-results td.fail {
-  color: #EF4444; /* đỏ: failed */
+  color: #EF4444;
   font-weight: bold;
+}
+
+/* ===========================
+   🧪 Test Case List (NEW)
+=========================== */
+.testcase-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 10px;
+}
+
+.testcase-list li {
+  background: #1e293b;
+  padding: 8px 10px;
+  margin: 5px 0;
+  border-left: 4px solid transparent;
+  border-radius: 6px;
+  font-weight: 500;
+  color: #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.testcase-list li.pass {
+  border-left-color: #10B981; /* xanh lá */
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.testcase-list li.fail {
+  border-left-color: #EF4444; /* đỏ */
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
+
+.testcase-list li:hover {
+  background: #0f172a;
 }

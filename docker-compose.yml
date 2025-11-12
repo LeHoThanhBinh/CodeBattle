@@ -59,6 +59,7 @@ services:
     restart: always
     volumes:
       - ./backend:/app
+      - ./backend/config:/config
     ports:
       - "8000:8000"
     env_file:
@@ -81,6 +82,7 @@ services:
     restart: always
     volumes:
       - ./backend:/app
+      - ./backend/config:/config 
       - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - ./backend/.env
@@ -151,8 +153,14 @@ services:
   # -------------------------------------
   # ⚖️ Judge0 API Server (Linux FIXED)
   # -------------------------------------
+  # -------------------------------------
+  # ⚖️ Judge0 API Server (Linux FIXED)
+  # -------------------------------------
   judge0_server:
-    image: judge0/judge0:1.13.0
+    build:
+      context: ./judge0
+      dockerfile: Dockerfile.full
+    image: judge0-full
     container_name: codebattle-judge0_server
     privileged: true
     restart: always
@@ -175,14 +183,10 @@ services:
       USE_ISOLATE: "true"
     volumes:
       - judge0_boxes:/box
-      - ./judge0/fake-isolate.sh:/tmp/fake-isolate.sh:ro
+      - ./judge0/fake-isolate.sh:/tmp/fake-isolate.sh   # mount file, không có :ro
     command: bash -c "
-      rm -f /api/tmp/pids/server.pid;
-      export RAILS_MAX_THREADS=${RAILS_MAX_THREADS};
-      export RAILS_SERVER_PROCESSES=${RAILS_SERVER_PROCESSES};
-      export WEB_CONCURRENCY=${WEB_CONCURRENCY};
-      unset DATABASE_URL;
-      echo '🔧 Installing fake isolate wrapper (no sandbox mode)...';
+      set -e;
+      echo '🔧 Installing fake isolate wrapper...';
       cp /tmp/fake-isolate.sh /usr/local/bin/isolate;
       chmod +x /usr/local/bin/isolate;
       echo '✅ Fake isolate wrapper installed';
@@ -190,7 +194,7 @@ services:
       bundle install --quiet;
       bundle exec rails db:create db:migrate db:seed 2>/dev/null || true;
       echo '✅ Database ready, starting Judge0 server...';
-      rails server -b 0.0.0.0 -p 2358"
+      exec rails server -b 0.0.0.0 -p 2358"
     ports:
       - "2358:2358"
     depends_on:
@@ -205,7 +209,10 @@ services:
   # ⚖️ Judge0 Worker (Linux FIXED)
   # -------------------------------------
   judge0_worker:
-    image: judge0/judge0:1.13.0
+    build:
+      context: ./judge0
+      dockerfile: Dockerfile.full
+    image: judge0-full
     container_name: codebattle-judge0_worker
     privileged: true
     restart: always
@@ -227,10 +234,6 @@ services:
     volumes:
       - judge0_boxes:/box
     depends_on:
-      judge0_db:
-        condition: service_healthy
-      judge0_redis:
-        condition: service_healthy
       judge0_server:
         condition: service_started
     networks:

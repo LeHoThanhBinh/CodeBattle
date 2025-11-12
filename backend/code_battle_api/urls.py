@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-
+from submissions.views import languages_view
 
 from users.views import (
     admin_get_users, 
@@ -23,8 +23,8 @@ urlpatterns = [
 
     path('api/', include('users.urls')),
     path('api/', include('matches.urls')),
-
-   
+    path("api/", include("submissions.urls")),
+    path('languages/', languages_view, name='languages'),
     path('api/admin/users/', admin_get_users, name='admin-get-users'),
     path('api/admin/stats/', admin_get_stats, name='admin-get-stats'),
     path('api/logout/', logout_user, name='logout'),

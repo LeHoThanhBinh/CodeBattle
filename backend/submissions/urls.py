@@ -1,7 +1,13 @@
 from django.urls import path
-from .views import SubmissionAPIView, SubmissionDetailAPIView  # ✅ thêm class mới
+from .views import (
+    SubmissionDetailAPIView,
+    languages_view,
+)
 
 urlpatterns = [
-    path('submissions/', SubmissionAPIView.as_view(), name='submission-create'),
-    path('submissions/<int:submission_id>/', SubmissionDetailAPIView.as_view(), name='submission-detail'),  # ✅ thêm dòng này
+    # 🧠 API mới: lấy danh sách ngôn ngữ từ /config/languages.json
+    path('languages/', languages_view, name='languages'),
+
+    # 🧩 API hiện có: submission detail
+    path('submissions/<int:submission_id>/', SubmissionDetailAPIView.as_view(), name='submission-detail'),
 ]

@@ -1,0 +1,7 @@
+[
+  {"id": 50, "key": "c", "name": "C (GCC 9.2.0)"},
+  {"id": 54, "key": "cpp", "name": "C++ (G++ 9.2.0)"},
+  {"id": 62, "key": "java", "name": "Java (OpenJDK 13.0.1)"},
+  {"id": 71, "key": "python", "name": "Python (3.8.1)"},
+  {"id": 63, "key": "javascript", "name": "Node.js (12.14.0)"}
+]

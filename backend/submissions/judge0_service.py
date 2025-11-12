@@ -19,12 +19,14 @@ from .utils import load_languages_config
 LANGUAGES = load_languages_config()
 LANGUAGE_MAP = {lang["key"]: lang["id"] for lang in LANGUAGES}
 
+
 def _encode_base64(text):
     if text is None:
         return None
     if isinstance(text, bytes):
         return base64.b64encode(text).decode("utf-8")
     return base64.b64encode(text.encode("utf-8")).decode("utf-8")
+
 
 def _decode_base64(text):
     if text is None:
@@ -35,23 +37,21 @@ def _decode_base64(text):
         logger.warning(f"Failed to decode base64: {e}")
         return text
 
+
 def run_code_with_judge0(source_code, language, input_data, expected_output=None):
     """
     Gửi code lên Judge0 để chạy và nhận kết quả (wait=true).
     Dùng base64 để tránh lỗi UTF-8 và logging chi tiết để debug.
     """
-    # Chuẩn hóa language_id
     try:
         language_id = int(language)
     except (ValueError, TypeError):
         language_id = LANGUAGE_MAP.get(str(language).lower())
 
-    # Fallback mặc định
     if not language_id:
         logger.warning(f"⚠️ Unknown language '{language}', fallback to C++ (52)")
         language_id = 52
 
-    # Chuẩn bị payload
     submission = {
         "source_code": _encode_base64(source_code),
         "language_id": language_id,
@@ -81,20 +81,13 @@ def run_code_with_judge0(source_code, language, input_data, expected_output=None
             logger.error(f"❌ [JUDGE0] Error: {result['error']}")
             return {"status": {"description": f"Judge0 Error: {result['error']}"}}
 
-        stdout = _decode_base64(result.get("stdout")) or ""
-        stderr = _decode_base64(result.get("stderr")) or ""
-        compile_output = _decode_base64(result.get("compile_output")) or ""
+        result["stdout"] = _decode_base64(result.get("stdout")) or ""
+        result["stderr"] = _decode_base64(result.get("stderr")) or ""
+        result["compile_output"] = _decode_base64(result.get("compile_output")) or ""
 
-        status_desc = result.get("status", {}).get("description", "Unknown")
-        exec_time = result.get("time", 0)
-        memory = result.get("memory", 0)
+        logger.info(f"✅ [JUDGE0] Status: {result.get('status', {}).get('description', 'Unknown')} | "
+                    f"Time {result.get('time', 0)}ms | Mem {result.get('memory', 0)}KB")
 
-        result["stdout"] = stdout
-        result["stderr"] = stderr
-        if compile_output:
-            result["compile_output"] = compile_output
-
-        logger.info(f"✅ [JUDGE0] Status: {status_desc} | Time {exec_time}ms | Mem {memory}KB")
         return result
 
     except requests.exceptions.Timeout:
