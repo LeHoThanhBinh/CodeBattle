@@ -1,8 +1,5 @@
-
 services:
-  # -------------------------------------
-  # 🗄 Database (MySQL cho Backend)
-  # -------------------------------------
+  # 🗄 Database (MySQL)
   db:
     image: mysql:8.0
     restart: always
@@ -12,7 +9,6 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: Asia/Ho_Chi_Minh
-      LANG: en_US.UTF-8
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
@@ -28,38 +24,25 @@ services:
     networks:
       - codebattle_net
 
-  # -------------------------------------
-  # 📝 Redis (Hàng đợi Celery)
-  # -------------------------------------
+  # 🧠 Redis (cho Celery)
   redis:
     image: redis:7-alpine
     restart: always
     command: ["redis-server", "--appendonly", "yes"]
-    environment:
-      - TZ=Asia/Ho_Chi_Minh
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - codebattle_net
 
-  # -------------------------------------
-  # 🧠 Backend (Django + Daphne)
-  # -------------------------------------
+  # 🧩 Backend (Django + Daphne)
   backend:
     build:
       context: ./backend
-    image: codebattle-backend-image:latest
-    working_dir: /app
+    image: codebattle-backend:latest
     command: daphne -b 0.0.0.0 -p 8000 code_battle_api.asgi:application
     restart: always
     volumes:
       - ./backend:/app
-      - ./backend/config:/config
     ports:
       - "8000:8000"
     env_file:
@@ -68,37 +51,26 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-    networks:
-      - codebattle_net
-
-  # -------------------------------------
-  # ⚙️ Celery Worker
-  # -------------------------------------
-  worker:
-    image: codebattle-backend-image:latest
-    working_dir: /app
-    command: celery -A code_battle_api worker --loglevel=info
-    restart: always
-    volumes:
-      - ./backend:/app
-      - ./backend/config:/config 
-      - /var/run/docker.sock:/var/run/docker.sock
-    env_file:
-      - ./backend/.env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      backend:
         condition: service_started
     networks:
       - codebattle_net
 
-  # -------------------------------------
+  # ⚙️ Celery Worker (NHẸ – KHÔNG CẦN DOCKER.SOCK)
+  worker:
+    image: codebattle-backend:latest
+    command: celery -A code_battle_api worker --loglevel=info
+    restart: always
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - codebattle_net
+
   # 🖥️ Frontend (React/Vite)
-  # -------------------------------------
   frontend:
     image: node:18-alpine
     working_dir: /app
@@ -108,149 +80,16 @@ services:
     ports:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
-    networks:
-      - codebattle_net
     depends_on:
       - backend
-
-  # -------------------------------------
-  # 🧩 Judge0 Database (PostgreSQL)
-  # -------------------------------------
-  judge0_db:
-    image: postgres:13-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: ${JUDGE0_DB_USER}
-      POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
-      POSTGRES_DB: ${JUDGE0_DB_NAME}
-    volumes:
-      - judge0_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${JUDGE0_DB_USER} -d ${JUDGE0_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - codebattle_net
 
-  # -------------------------------------
-  # 📦 Judge0 Redis
-  # -------------------------------------
-  judge0_redis:
-    image: redis:7.2.0-alpine
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${JUDGE0_REDIS_PASS}"]
-    restart: always
-    volumes:
-      - judge0_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${JUDGE0_REDIS_PASS}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - codebattle_net
-
-  # -------------------------------------
-  # ⚖️ Judge0 API Server (Linux FIXED)
-  # -------------------------------------
-  # -------------------------------------
-  # ⚖️ Judge0 API Server (Linux FIXED)
-  # -------------------------------------
-  judge0_server:
-    build:
-      context: ./judge0
-      dockerfile: Dockerfile.full
-    image: judge0-full
-    container_name: codebattle-judge0_server
-    privileged: true
-    restart: always
-    environment:
-      PORT: "2358"
-      RAILS_ENV: production
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
-      RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
-      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES}
-      WEB_CONCURRENCY: ${WEB_CONCURRENCY}
-      RAILS_SERVE_STATIC_FILES: "true"
-      POSTGRES_HOST: judge0_db
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${JUDGE0_DB_NAME}
-      POSTGRES_USER: ${JUDGE0_DB_USER}
-      POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
-      REDIS_HOST: judge0_redis
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${JUDGE0_REDIS_PASS}
-      USE_ISOLATE: "true"
-    volumes:
-      - judge0_boxes:/box
-      - ./judge0/fake-isolate.sh:/tmp/fake-isolate.sh   # mount file, không có :ro
-    command: bash -c "
-      set -e;
-      echo '🔧 Installing fake isolate wrapper...';
-      cp /tmp/fake-isolate.sh /usr/local/bin/isolate;
-      chmod +x /usr/local/bin/isolate;
-      echo '✅ Fake isolate wrapper installed';
-      echo '🚀 Running database setup for Judge0...';
-      bundle install --quiet;
-      bundle exec rails db:create db:migrate db:seed 2>/dev/null || true;
-      echo '✅ Database ready, starting Judge0 server...';
-      exec rails server -b 0.0.0.0 -p 2358"
-    ports:
-      - "2358:2358"
-    depends_on:
-      judge0_db:
-        condition: service_healthy
-      judge0_redis:
-        condition: service_healthy
-    networks:
-      - codebattle_net
-
-  # -------------------------------------
-  # ⚖️ Judge0 Worker (Linux FIXED)
-  # -------------------------------------
-  judge0_worker:
-    build:
-      context: ./judge0
-      dockerfile: Dockerfile.full
-    image: judge0-full
-    container_name: codebattle-judge0_worker
-    privileged: true
-    restart: always
-    environment:
-      WORKER: "true"
-      RAILS_ENV: production
-      SECRET_KEY_BASE: ${JUDGE0_SECRET_KEY_BASE}
-      RAILS_MAX_THREADS: ${RAILS_MAX_THREADS}
-      RAILS_SERVER_PROCESSES: ${RAILS_SERVER_PROCESSES}
-      POSTGRES_HOST: judge0_db
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${JUDGE0_DB_NAME}
-      POSTGRES_USER: ${JUDGE0_DB_USER}
-      POSTGRES_PASSWORD: ${JUDGE0_DB_PASS}
-      REDIS_HOST: judge0_redis
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${JUDGE0_REDIS_PASS}
-      USE_ISOLATE: "true"
-    volumes:
-      - judge0_boxes:/box
-    depends_on:
-      judge0_server:
-        condition: service_started
-    networks:
-      - codebattle_net
-
-# -------------------------------------
-# 📦 Dữ liệu & Mạng
-# -------------------------------------
 volumes:
   db_data:
   redis_data:
-  judge0_postgres_data:
-  judge0_redis_data:
-  judge0_boxes:
   frontend_node_modules:
 
 networks:
   codebattle_net:
     driver: bridge
-    name: codebattle_network

@@ -14,7 +14,7 @@ JUDGE0_API_KEY = getattr(settings, "JUDGE0_API_KEY", None)
 # ==================================
 # 🌐 Ngôn ngữ được hỗ trợ
 # ==================================
-from .utils import load_languages_config
+from submissions.utils import load_languages_config
 
 LANGUAGES = load_languages_config()
 LANGUAGE_MAP = {lang["key"]: lang["id"] for lang in LANGUAGES}

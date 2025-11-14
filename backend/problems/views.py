@@ -60,7 +60,7 @@ class GenerateTestCasesView(APIView):
                 {"error": "GEMINI_API_KEY chưa được cấu hình trên server."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
+
         try:
             genai.configure(api_key=api_key)
         except Exception as e:
@@ -79,40 +79,59 @@ class GenerateTestCasesView(APIView):
         prompt = f"""
         Bạn là một chuyên gia ra đề thi lập trình.
         Dựa trên mô tả bài toán dưới đây, hãy tạo 10 test case (2 mẫu, 8 ẩn).
-        Mô tả bài toán:
-        {description}
 
-        Chỉ trả lời bằng một đối tượng JSON có cấu trúc chính xác như sau:
-        {{"test_cases": [{{"input": "...", "output": "...", "is_hidden": false}}, ...]}}
+        Mô tả bài toán:
+        \"\"\"{description}\"\"\"
+
+        CHỈ TRẢ LỜI BẰNG MỘT ĐỐI TƯỢNG JSON DUY NHẤT, KHÔNG THÊM CHỮ NÀO BÊN NGOÀI.
+        Format bắt buộc:
+
+        {{
+        "test_cases": [
+            {{"input": "1 2 3", "output": "6", "is_hidden": false}}
+        ]
+        }}
         """
 
         generation_config = {
             "response_mime_type": "application/json",
         }
-        
+
         try:
-            # =============================================
-            # ===== ĐÂY LÀ DÒNG THAY ĐỔI DUY NHẤT =====
-            # =============================================
             model = genai.GenerativeModel(
-                'gemini-2.5-flash', 
-                generation_config=generation_config
+                "gemini-2.5-flash",
+                generation_config=generation_config,
             )
             response = model.generate_content(prompt)
-            
-            json_response = json.loads(response.text) 
+
+            # ----------------- XỬ LÝ CHUỖI TRẢ VỀ -----------------
+            raw = (response.text or "").strip()
+
+            # 1. Loại bỏ ```json ... ``` nếu có
+            if raw.startswith("```"):
+                raw = raw.replace("```json", "").replace("```", "").strip()
+
+            # 2. Bỏ xuống dòng dư thừa (không bắt buộc nhưng cho chắc)
+            raw = raw.replace("\r", "").strip()
+
+            # 3. Parse JSON
+            json_response = json.loads(raw)
 
             return Response(json_response, status=status.HTTP_200_OK)
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            # In raw để dễ debug nếu cần
+            print("[GEMINI RAW RESPONSE]", raw)
             return Response(
-                {"error": "Gemini trả về dữ liệu không phải JSON. Vui lòng thử lại."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    "error": "Gemini trả về dữ liệu không phải JSON. Vui lòng thử lại.",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         except Exception as e:
-            # In ra lỗi chi tiết để debug
-            print(f"[GEMINI API ERROR]: {str(e)}") 
+            print(f"[GEMINI API ERROR]: {str(e)}")
             return Response(
                 {"error": f"Lỗi không xác định từ Gemini API: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

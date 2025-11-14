@@ -3,7 +3,7 @@ from django.utils import timezone
 from .models import Submission
 from problems.models import TestCase
 from matches.models import Match
-from submissions.judge0_service import run_code_with_judge0
+from code_battle_api.judge0_service import run_code_with_judge0
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import logging
@@ -40,7 +40,6 @@ def judge_task(submission_id):
 
             # Lấy thông tin từ Judge0
             status = result.get("status", {}) or {}
-            status_desc = status.get("description", "Unknown")
             status_id = status.get("id")  # 3 = Accepted (Judge0)
 
             stdout = (result.get("stdout") or "").strip()
@@ -49,7 +48,6 @@ def judge_task(submission_id):
             exec_time = float(result.get("time") or 0)
             memory = int(result.get("memory") or 0)
 
-            # Chuẩn hóa dữ liệu để so sánh chính xác
             expected = (tc.expected_output or "").strip()
             actual = (stdout or "").strip()
 
@@ -57,6 +55,9 @@ def judge_task(submission_id):
             is_passed = (status_id == 3 and actual == expected)
             if is_passed:
                 passed += 1
+
+            # 🔥 CHUẨN HOÁ STATUS CHO FE
+            normalized_status = "ACCEPTED" if is_passed else "WRONG_ANSWER"
 
             total_time += exec_time
             total_memory += memory
@@ -67,7 +68,7 @@ def judge_task(submission_id):
                 "input": tc.input_data,
                 "expected_output": expected,
                 "actual_output": actual,
-                "status": "PASS ✅" if is_passed else "FAIL ❌",
+                "status": normalized_status,   # ⬅ FE sẽ đọc status này
                 "stderr": stderr if stderr else compile_output,
                 "exec_time": exec_time,
                 "memory": memory,
@@ -78,14 +79,12 @@ def judge_task(submission_id):
         avg_time = round(total_time / successful_runs, 3) if successful_runs else 0
         avg_mem = round(total_memory / successful_runs) if successful_runs else 0
 
-        # ✅ Xác định trạng thái cuối cùng
         final_status = (
             Submission.SubmissionStatus.ACCEPTED
             if passed == total and total > 0
             else Submission.SubmissionStatus.WRONG_ANSWER
         )
 
-        # Lưu kết quả submission
         submission.status = final_status
         submission.total_test_cases = total
         submission.test_cases_passed = passed
@@ -94,7 +93,7 @@ def judge_task(submission_id):
         submission.detailed_results = details
         submission.save()
 
-        # 📡 Gửi realtime event: submission_update
+        # 📡 Realtime: submission_update
         channel_layer = get_channel_layer()
         match_group_name = f"match_{submission.match.id}"
         async_to_sync(channel_layer.group_send)(
@@ -108,7 +107,7 @@ def judge_task(submission_id):
             },
         )
 
-        # 🏁 Nếu cả hai người chơi đã nộp bài → xác định người thắng
+        # 🏁 Nếu cả hai người chơi đã nộp
         match = submission.match
         submissions = list(match.submissions.all()[:2])
         if len(submissions) == 2:

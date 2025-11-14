@@ -47,6 +47,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Cài đặt các Python dependencies đã được build từ stage trước
 COPY --from=builder /wheels /wheels
+COPY config /config
+
 # COPY requirements.txt . # Không cần copy lại nếu chỉ cài từ wheels
 RUN pip install --no-cache /wheels/*
 
