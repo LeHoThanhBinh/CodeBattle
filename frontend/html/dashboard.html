@@ -4,33 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Battle - Dashboard</title>
-    <!-- 
-      LƯU Ý: Bạn cần cập nhật đường dẫn CSS này 
-      để trỏ đến file CSS dashboard chính của bạn.
-    -->
-    <link rel="stylesheet" href="/styles/dashboard.css">
+
+    <!-- CSS riêng của Dashboard -->
+    <link rel="stylesheet" href="/css/pages/dashboard.css">
+
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body>
+
+<body class="dashboard-page">
+
     <div class="dashboard-container">
+
+        <!-- HEADER -->
         <header class="dashboard-header" id="userInfo">
             <div class="logo-section">
                 <div class="logo-icon">CB</div>
                 <span>Code Battle</span>
             </div>
+
             <div class="user-section">
                 <div class="user-details">
                     <div class="user-name" id="userName">---</div>
+
                     <div class="user-rating">
                         <span class="rank-badge" id="userRankBadge">---</span>
-                        <span id="userElo">----</span> ELO
+                        <span id="userElo">----</span> pts
                     </div>
                 </div>
+
                 <div class="user-avatar" id="userAvatar">--</div>
                 <button id="logoutBtn" class="btn btn-secondary btn-small">Đăng xuất</button>
             </div>
         </header>
 
+        <!-- STATS GRID -->
         <ul class="stats-grid" id="statsGrid">
             <li class="stat-card">
                 <div class="stat-icon trophy"><i class="fa-solid fa-trophy"></i></div>
@@ -39,6 +47,7 @@
                     <div class="stat-label">Total Battles</div>
                 </div>
             </li>
+
             <li class="stat-card">
                 <div class="stat-icon bolt"><i class="fa-solid fa-bolt"></i></div>
                 <div class="stat-info">
@@ -46,6 +55,7 @@
                     <div class="stat-label">Win Rate</div>
                 </div>
             </li>
+
             <li class="stat-card">
                 <div class="stat-icon bullseye"><i class="fa-solid fa-bullseye"></i></div>
                 <div class="stat-info">
@@ -53,6 +63,7 @@
                     <div class="stat-label">Current Streak</div>
                 </div>
             </li>
+
             <li class="stat-card">
                 <div class="stat-icon chart-line"><i class="fa-solid fa-chart-line"></i></div>
                 <div class="stat-info">
@@ -62,49 +73,68 @@
             </li>
         </ul>
 
+        <!-- MAIN GRID -->
         <main class="dashboard-main">
+
+            <!-- FIND OPPONENT -->
             <div class="panel find-opponent-panel">
+
                 <h2 class="panel-title">Find Opponent</h2>
+
                 <button class="btn btn-quick-match" id="quickMatchBtn">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> Quick Match
                 </button>
+
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search by username...">
                 </div>
-                <h3 class="online-players-title">Online Players (<span id="onlineCount">0</span>)</h3>
+
+                <h3 class="online-players-title">
+                    Online Players (<span id="onlineCount">0</span>)
+                </h3>
+
                 <div class="player-list" id="playerList">
                     <div class="loading-spinner"></div>
                 </div>
+
             </div>
 
+            <!-- LEADERBOARD -->
             <div class="panel leaderboard-panel">
+
                 <div class="panel-header">
                     <h2 class="panel-title">Leaderboard</h2>
                     <a href="/leaderboard" class="view-all-link" data-link>View All →</a>
                 </div>
+
                 <div class="leaderboard-list" id="leaderboardList">
                     <div class="loading-spinner"></div>
                 </div>
+
             </div>
+
         </main>
 
-        <!-- Modal Chờ thách đấu -->
+        <!-- MODAL: Waiting -->
         <div id="challenge-waiting-modal" class="modal-overlay" style="display: none;">
             <div class="modal-content">
                 <h3>Challenge Sent!</h3>
-                <p>Waiting for <strong id="waiting-opponent-name">Opponent</strong> to respond...</p>
+                <p>Waiting for <strong id="waiting-opponent-name">Opponent</strong>...</p>
+
                 <div class="timer-bar">
                     <div id="timer-bar-progress" class="timer-bar-progress"></div>
                 </div>
+
                 <button id="cancel-challenge-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
 
-        <!-- Toast Nhận thách đấu -->
+        <!-- TOAST: incoming challenge -->
         <div id="challenge-toast" class="toast" style="display: none;">
             <div class="toast-content">
                 <i class="fa-solid fa-bell toast-icon"></i>
                 <p><strong id="challenger-name">Challenger</strong> has challenged you!</p>
+
                 <div class="toast-buttons">
                     <button id="accept-challenge-btn" class="btn btn-primary btn-small">Accept</button>
                     <button id="decline-challenge-btn" class="btn btn-secondary btn-small">Decline</button>
@@ -112,62 +142,53 @@
             </div>
         </div>
 
-        <!-- 
-          ==================================
-           MODAL HIỂN THỊ STATS (ĐÃ THÊM)
-          ================================== 
-        -->
+        <!-- MODAL: Player Stats -->
         <div class="modal-overlay" id="player-stats-modal" style="display: none;">
-          <div class="modal-content player-stats-modal-content">
-            
-            <!-- Nút đóng -->
-            <button class="close-modal-btn" id="close-stats-modal-btn">&times;</button>
-            
-            <!-- Thông tin cơ bản -->
-            <div class="player-stats-header">
-              <div class="user-avatar" id="stats-avatar">AV</div>
-              <div class="player-stats-info">
-                <h3 id="stats-username">Loading...</h3>
-                <div id="stats-rating" class="player-rating">
-                  <span class="rank-badge rank-silver">...</span> ... ELO
+            <div class="modal-content player-stats-modal-content">
+
+                <button class="close-modal-btn" id="close-stats-modal-btn">&times;</button>
+
+                <div class="player-stats-header">
+                    <div class="user-avatar" id="stats-avatar">AV</div>
+                    <div class="player-stats-info">
+                        <h3 id="stats-username">Loading...</h3>
+                        <div id="stats-rating" class="player-rating">
+                            <span class="rank-badge rank-bronze">...</span> ... pts
+                        </div>
+                    </div>
                 </div>
-              </div>
+
+                <div class="player-stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-icon">🏆</span>
+                        <div class="stat-value" id="stats-total-battles">...</div>
+                        <div class="stat-label">Total Battles</div>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-icon">⚡</span>
+                        <div class="stat-value" id="stats-win-rate">...%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-icon">🎯</span>
+                        <div class="stat-value" id="stats-current-streak">...</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+
+                    <div class="stat-item">
+                        <span class="stat-icon">📈</span>
+                        <div class="stat-value" id="stats-global-rank">#...</div>
+                        <div class="stat-label">Global Rank</div>
+                    </div>
+                </div>
+
             </div>
-        
-            <!-- Các chỉ số (Giống ảnh bạn gửi) -->
-            <div class="player-stats-grid">
-              <div class="stat-item">
-                <span class="stat-icon">🏆</span>
-                <div class="stat-value" id="stats-total-battles">...</div>
-                <div class="stat-label">Total Battles</div>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">⚡️</span>
-                <div class="stat-value" id="stats-win-rate">...%</div>
-                <div class="stat-label">Win Rate</div>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">🎯</span>
-                <div class="stat-value" id="stats-current-streak">...</div>
-                <div class="stat-label">Current Streak</div>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">📈</span>
-                <div class="stat-value" id="stats-global-rank">#...</div>
-                <div class="stat-label">Global Rank</div>
-              </div>
-            </div>
-        
-          </div>
         </div>
-        <!-- === KẾT THÚC MODAL STATS === -->
 
-    </div> <!-- Kết thúc .dashboard-container -->
+    </div>
 
-    <!-- 
-      LƯU Ý: Bạn cần đảm bảo đường dẫn này trỏ đến file JS
-      chính của bạn (nơi bạn import dashboard.js).
-    -->
     <script type="module" src="/js/main.js"></script>
 </body>
 </html>

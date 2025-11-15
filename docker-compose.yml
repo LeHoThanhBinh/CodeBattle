@@ -1,5 +1,5 @@
 services:
-  # 🗄 Database (MySQL)
+  
   db:
     image: mysql:8.0
     restart: always
@@ -24,7 +24,7 @@ services:
     networks:
       - codebattle_net
 
-  # 🧠 Redis (cho Celery)
+  
   redis:
     image: redis:7-alpine
     restart: always
@@ -34,7 +34,7 @@ services:
     networks:
       - codebattle_net
 
-  # 🧩 Backend (Django + Daphne)
+  
   backend:
     build:
       context: ./backend
@@ -55,7 +55,7 @@ services:
     networks:
       - codebattle_net
 
-  # ⚙️ Celery Worker (NHẸ – KHÔNG CẦN DOCKER.SOCK)
+  
   worker:
     image: codebattle-backend:latest
     command: celery -A code_battle_api worker --loglevel=info
@@ -70,7 +70,7 @@ services:
     networks:
       - codebattle_net
 
-  # 🖥️ Frontend (React/Vite)
+  
   frontend:
     image: node:18-alpine
     working_dir: /app

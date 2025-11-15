@@ -6,14 +6,29 @@ from django.dispatch import receiver
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     
-    # Các trường thông tin bổ sung
+    # Điểm (bắt đầu từ 0)
     rating = models.IntegerField(default=0)
+
+    # Rank dựa vào rating
+    rank = models.CharField(max_length=20, default="Bronze")
+
     avatar = models.URLField(max_length=255, blank=True, null=True)
     biography = models.TextField(blank=True, null=True)
     is_online = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username
+    
+    # Hàm cập nhật cấp bậc
+    def update_rank(self):
+        if self.rating >= 40:
+            self.rank = "Platinum"
+        elif self.rating >= 30:
+            self.rank = "Gold"
+        elif self.rating >= 20:
+            self.rank = "Silver"
+        else:
+            self.rank = "Bronze"
 
 class UserStats(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='stats')
