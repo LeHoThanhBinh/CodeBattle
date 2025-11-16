@@ -1,112 +1,175 @@
-/* File này có thể sử dụng lại hầu hết các style từ login.css.
-  Bạn có thể copy nội dung của login.css vào đây hoặc import nó.
-  Dưới đây là một ví dụ đầy đủ.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.auth-container {
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ================================
+   BACKGROUND VALORANT STYLE
+================================ */
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0F1923;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 80vh;
-    padding: 2rem;
+    animation: fadeIn 0.6s ease;
+    color: white;
 }
 
-.auth-form {
+/* ANIMATIONS */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(1.03); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes floatUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================================
+   FORM CONTAINER
+================================ */
+.auth-container {
     width: 100%;
-    max-width: 420px;
-    padding: 2.5rem;
-    border-radius: 8px;
-    background-color: #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e0e0e0;
+    max-width: 470px;
+    padding: 26px;
+    animation: floatUp 0.8s ease;
 }
 
+/* ================================
+   VALORANT GLASS PANEL
+================================ */
+.auth-form {
+    background: #1A2733;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    transition: 0.3s ease;
+}
+
+.auth-form:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.5);
+}
+
+/* ================================
+   TITLE
+================================ */
 .auth-form h2 {
     text-align: center;
-    margin-bottom: 1.5rem;
-    font-size: 1.8rem;
-    color: #333;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #FF4655; /* Valorant Red */
+    margin-bottom: 2rem;
 }
 
+/* ================================
+   INPUTS
+================================ */
 .form-group {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.3rem;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #555;
+    color: #e1e1e1;
+    margin-bottom: 0.45rem;
 }
 
 .form-group input {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 0.95rem 1rem;
+    border-radius: 10px;
+    border: 2px solid #1f2f40;
+    background: #0F1923;
+    color: white;
     font-size: 1rem;
-    box-sizing: border-box;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition: 0.25s ease;
+}
+
+.form-group input:hover {
+    border-color: #334a60;
 }
 
 .form-group input:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    border-color: #FF4655;
+    box-shadow: 0 0 12px rgba(255, 70, 85, 0.5);
 }
 
+/* ================================
+   SUBMIT BUTTON (VALORANT RED)
+================================ */
 .auth-form button[type="submit"] {
     width: 100%;
-    padding: 0.85rem;
+    padding: 1rem;
     border: none;
-    border-radius: 4px;
-    background-color: #28a745; /* Màu xanh lá cho đăng ký */
+    border-radius: 10px;
+    background: #FF4655;
     color: white;
     font-size: 1.1rem;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: 0.3s ease;
 }
 
 .auth-form button[type="submit"]:hover {
-    background-color: #218838;
+    background: #ff5b6a;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(255, 70, 85, 0.4);
 }
 
+.auth-form button[type="submit"]:active {
+    transform: scale(0.96);
+}
+
+/* ================================
+   MESSAGES
+================================ */
 .error-message {
-    color: #dc3545;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    text-align: center;
-    font-size: 0.9rem;
+    padding: 0.9rem;
+    border-radius: 10px;
+    margin-bottom: 1.2rem;
+    background: rgba(255, 70, 85, 0.2);
+    border: 1px solid #FF4655;
+    color: #FF4655;
 }
 
 .success-message {
-    color: #155724;
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    text-align: center;
-    font-size: 0.9rem;
+    padding: 0.9rem;
+    border-radius: 10px;
+    margin-bottom: 1.2rem;
+    background: rgba(10, 200, 185, 0.15);
+    border: 1px solid #0AC8B9;
+    color: #0AC8B9;
 }
 
-
+/* ================================
+   SWITCH LINKS
+================================ */
 .auth-switch {
     text-align: center;
-    margin-top: 1.5rem;
-    font-size: 0.9rem;
+    margin-top: 1.4rem;
+    font-size: 0.95rem;
+    color: #d0d0d0;
 }
 
 .auth-switch a {
-    color: #007bff;
+    color: #FF4655;
+    font-weight: 700;
     text-decoration: none;
-    font-weight: 600;
+    transition: 0.25s ease;
 }
 
 .auth-switch a:hover {
+    color: #ff7380;
     text-decoration: underline;
 }

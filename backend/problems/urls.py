@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     ProblemListCreateView, 
     ProblemDetailView,
-    GenerateTestCasesView # <-- Import view gọi AI
+    GenerateTestCasesView,
+    ImportProblemPDFView  # <-- Import view gọi AI
 )
 
 urlpatterns = [
@@ -17,4 +18,6 @@ urlpatterns = [
     # --- URL MỚI CHO CHỨC NĂNG AI ---
     # Frontend sẽ POST (description) đến URL này
     path('generate-testcases/', GenerateTestCasesView.as_view(), name='generate-testcases'),
+    path("problems/import-pdf/", ImportProblemPDFView.as_view())
+
 ]

@@ -1,8 +1,13 @@
-import json, os
+import json
+import os
 
 def load_languages_config():
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  # tới CodeBattle/
+    # __file__ = /app/submissions/utils.py
+    # dirname 1 lần  -> /app/submissions
+    # dirname 2 lần  -> /app   (thư mục gốc Django trong container)
+    base_dir = os.path.dirname(os.path.dirname(__file__))   # /app
     config_path = os.path.join(base_dir, "config", "languages.json")
+
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)

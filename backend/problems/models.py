@@ -3,19 +3,34 @@ from django.contrib.auth.models import User
 
 
 class Problem(models.Model):
+
+    # =============================
+    # ⭐ Difficulty 5 mức độ
+    # =============================
     class Difficulty(models.IntegerChoices):
         EASY = 1, 'Easy'
         MEDIUM = 2, 'Medium'
-        NORMAL = 3, 'Normal'
-        HARD = 4, 'Hard'
+        HARD = 3, 'Hard'
+        VERY_HARD = 4, 'Very Hard'
         EXTREME = 5, 'Extreme'
 
     title = models.CharField(max_length=200, unique=True)
     description = models.TextField(help_text="Full problem description, supports Markdown.")
-    difficulty = models.IntegerField(choices=Difficulty.choices, default=Difficulty.NORMAL)
 
-    time_limit = models.IntegerField(default=1000, help_text="in milliseconds")
-    memory_limit = models.IntegerField(default=256, help_text="in MB")
+    # ⭐ Default để Medium (2)
+    difficulty = models.IntegerField(
+        choices=Difficulty.choices,
+        default=Difficulty.MEDIUM
+    )
+
+    time_limit = models.IntegerField(
+        default=1000,
+        help_text="Time limit in milliseconds"
+    )
+    memory_limit = models.IntegerField(
+        default=256,
+        help_text="Memory limit in MB"
+    )
 
     is_active = models.BooleanField(default=True)
 
@@ -39,10 +54,12 @@ class TestCase(models.Model):
     )
     input_data = models.TextField()
     expected_output = models.TextField()
+
     is_hidden = models.BooleanField(
         default=True,
         help_text="Hidden test cases are not shown to the user."
     )
+
     ignore_trailing_whitespace = models.BooleanField(
         default=True,
         help_text="If true, trims whitespace before comparing outputs."
