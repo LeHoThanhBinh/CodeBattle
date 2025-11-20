@@ -40,12 +40,12 @@
 
       <section class="editor-section">
         <div class="editor-header">
-          <label for="language-selector">Language:</label>
-        <select id="language-selector"></select>
-        <script src="/js/battle-room.js" type="module"></script>
-
-
+            <span class="language-fixed-label">
+                Language: <strong id="language-display">Loading...</strong>
+            </span>
+            <script src="/js/battle-room.js" type="module"></script>
         </div>
+
 
         <textarea
           id="code-editor"

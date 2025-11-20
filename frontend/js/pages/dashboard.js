@@ -18,6 +18,67 @@ function debounce(func, delay) {
         timeout = setTimeout(() => func.apply(this, args), delay);
     };
 }
+// ==============================
+// ⭐ LOAD NGÔN NGỮ + CHANNEL SETTINGS ⭐
+// ==============================
+async function loadPreferredSettings() {
+    try {
+        // Load language list từ backend
+        const languages = await apiFetch("/api/languages/");
+        const langSelect = document.getElementById("preferred-language");
+
+        // Clear danh sách cũ
+        langSelect.innerHTML = "";
+
+        // Thêm option từ API
+        languages.forEach(lang => {
+            const opt = document.createElement("option");
+            opt.value = lang.key;
+            opt.textContent = lang.name || lang.label;
+            langSelect.appendChild(opt);
+        });
+
+        // Load data từ localStorage nếu có
+        const savedLang = localStorage.getItem("preferred_language");
+        const savedChannel = localStorage.getItem("preferred_channel");
+
+        if (savedLang) langSelect.value = savedLang;
+        if (savedChannel) document.getElementById("preferred-channel").value = savedChannel;
+
+        // --- SAVE BUTTON ---
+        document.getElementById("save-channel-btn").addEventListener("click", async () => {
+
+            const lang = langSelect.value;
+            const channel = document.getElementById("preferred-channel").value;
+
+            try {
+                // Lưu lên backend
+                await apiFetch("/api/update-preferences/", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        preferred_language: lang,
+                        preferred_difficulty: channel
+                    })
+                });
+
+                // Lưu vào localStorage
+                localStorage.setItem("preferred_language", lang);
+                localStorage.setItem("preferred_channel", channel);
+
+                // Reload lại trang để áp dụng thay đổi
+                window.location.reload();
+
+            } catch (err) {
+                console.error("❌ Error saving preferences:", err);
+                alert("❌ Failed to save settings.");
+            }
+        });
+
+    } catch (err) {
+        console.error("❌ Cannot load preferred settings:", err);
+    }
+}
+
 
 // --- KHỞI TẠO DASHBOARD ---
 export async function initDashboardPage(router) {
@@ -33,6 +94,7 @@ export async function initDashboardPage(router) {
             apiFetch('/api/stats/'),
             apiFetch('/api/leaderboard/')
         ]);
+        await loadPreferredSettings();
 
         updateHeader(profile);
         updateStats(stats, profile);
@@ -262,14 +324,19 @@ function renderOnlinePlayers(players) {
     const playerList = document.getElementById('playerList');
     const onlineCount = document.getElementById('onlineCount');
 
-    onlineCount.textContent = players.length;
+    const myLang = localStorage.getItem("preferred_language");
 
-    if (players.length === 0) {
-        playerList.innerHTML = `<p style="text-align:center;opacity:0.6;">No players online</p>`;
+    // 🔥 Lọc ra những player có cùng ngôn ngữ
+    const filtered = players.filter(p => p.preferred_language === myLang);
+
+    onlineCount.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+        playerList.innerHTML = `<p style="text-align:center;opacity:0.6;">No players available with same language</p>`;
         return;
     }
 
-    playerList.innerHTML = players.map(player => {
+    playerList.innerHTML = filtered.map(player => {
         const rank = player.rank || "Bronze";
         return `
             <div class="player-item" data-player-id="${player.id}" data-player-name="${player.username}">
@@ -290,6 +357,7 @@ function renderOnlinePlayers(players) {
         `;
     }).join('');
 }
+
 
 function renderLeaderboard(players, currentUserId) {
     const leaderboardList = document.getElementById('leaderboardList');

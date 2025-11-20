@@ -794,3 +794,159 @@ body {
 .player-item {
     pointer-events: auto !important;
 }
+/***********************************************
+   CHANNEL SETTINGS — VALORANT PREMIUM STYLE
+************************************************/
+
+.channel-settings-panel {
+    background: linear-gradient(145deg, rgba(26,32,44,0.85), rgba(45,55,72,0.92));
+    padding: 34px;
+    border-radius: 14px;
+    border: 1px solid rgba(99,179,237,0.2);
+    box-shadow:
+        0 0 25px rgba(0, 0, 0, 0.4),
+        0 0 12px rgba(99,179,237,0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Neon border animation */
+.channel-settings-panel::before {
+    content: '';
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    border-radius: 14px;
+    background: linear-gradient(120deg, var(--v-purple), var(--v-cyan), var(--v-red));
+    background-size: 300% 300%;
+    z-index: -1;
+    animation: neonFlow 5s ease infinite;
+    opacity: 0.22;
+}
+
+@keyframes neonFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.channel-settings-panel .panel-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--v-text);
+    margin-bottom: 28px;
+    text-transform: uppercase;
+    position: relative;
+}
+
+/* Title underline glow */
+.channel-settings-panel .panel-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--v-purple), var(--v-cyan));
+    margin-top: 6px;
+    border-radius: 6px;
+    box-shadow: 0 0 12px rgba(99,179,237,0.6);
+}
+
+/***********************************************
+   INPUT GROUPS — CLEAN & GLOWING
+************************************************/
+.setting-group {
+    margin-bottom: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setting-group label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--v-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-left: 4px;
+}
+
+/***********************************************
+   SELECT — VALORANT LOADOUT STYLE
+************************************************/
+.setting-group select {
+    appearance: none;
+    background: linear-gradient(145deg, #1c2331, #2d3748);
+    padding: 14px 18px;
+    font-size: 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(99,179,237,0.25);
+    color: var(--v-text);
+    transition: var(--v-transition);
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.25);
+    cursor: pointer;
+    position: relative;
+}
+
+/* Hover glow */
+.setting-group select:hover {
+    border-color: var(--v-cyan);
+    box-shadow:
+        0 0 10px rgba(99,179,237,0.25),
+        inset 0 0 14px rgba(99,179,237,0.08);
+}
+
+/* Focus glowing outline */
+.setting-group select:focus {
+    outline: none;
+    border-color: var(--v-purple);
+    box-shadow:
+        0 0 15px rgba(159,122,234,0.4),
+        inset 0 0 15px rgba(159,122,234,0.25);
+}
+
+/***********************************************
+   SAVE BUTTON — ULTRA PREMIUM GAMING BUTTON
+************************************************/
+#save-channel-btn {
+    background: linear-gradient(140deg, var(--v-red), #ff7272);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    width: 100%;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    box-shadow:
+        0 4px 14px rgba(229,62,62,0.3),
+        inset 0 -3px 6px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Light sweep animation */
+#save-channel-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    transform: skewX(-20deg);
+    transition: all 0.6s ease;
+}
+
+#save-channel-btn:hover::after {
+    left: 120%;
+}
+
+#save-channel-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow:
+        0 8px 24px rgba(229,62,62,0.45),
+        0 0 12px rgba(255,255,255,0.12);
+}
