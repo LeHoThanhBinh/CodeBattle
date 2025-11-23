@@ -62,7 +62,6 @@ class UserActivityLog(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.activity_type} - {self.timestamp}"
 
-
 @receiver(post_save, sender=User)
 def create_or_update_user_extensions(sender, instance, created, **kwargs):
     if created:

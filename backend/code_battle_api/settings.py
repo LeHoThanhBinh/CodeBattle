@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "corsheaders",
     'channels',
     # App của bạn
+    'anti_ai',
     'users',
     'problems',
     'matches',

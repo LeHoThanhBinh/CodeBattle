@@ -26,9 +26,10 @@ urlpatterns = [
     path("api/", include("submissions.urls")),
     path('languages/', languages_view, name='languages'),
     path('api/admin/users/', admin_get_users, name='admin-get-users'),
-    path('api/admin/stats/', admin_get_stats, name='admin-get-stats'),
+    path('api/admin/stats/', admin_get_stats, name='admin-get-stats'),  
     path('api/logout/', logout_user, name='logout'),
-    
+    path("api/anti-cheat/", include("anti_ai.urls")),
+
     path('api/admin/monitor-stats/', admin_get_monitor_stats, name='admin-monitor-stats'),
     path('api/admin/activity-log/', admin_get_activity_log, name='admin-activity-log'),
     path('api/admin/top-players/', admin_get_top_players, name='admin-top-players'),

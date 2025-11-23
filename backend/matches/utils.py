@@ -1,6 +1,9 @@
 from django.utils import timezone
 from matches.models import Match
 from submissions.models import Submission
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 
 def finalize_match(match_id):
     match = Match.objects.get(pk=match_id)
@@ -29,7 +32,7 @@ def finalize_match(match_id):
             winner = match.player2
             result_type = "PLAYER2_WIN"
 
-    # 🧠 Tính điểm cho từng người
+    # 🧠 Tính điểm
     match.player1_rating_change = calculate_rating_change(s1_status, winner == match.player1)
     match.player2_rating_change = calculate_rating_change(s2_status, winner == match.player2)
 
@@ -45,15 +48,28 @@ def finalize_match(match_id):
         "p2_change": match.player2_rating_change
     }
 
+
 def calculate_rating_change(status, is_winner):
-    """
-    Tính điểm dựa theo trạng thái kết quả.
-    """
+    """Tính điểm dựa theo trạng thái kết quả."""
     if status == 'ACCEPTED':
         return 50 if is_winner else -25
     elif status in ['WRONG_ANSWER', 'TIMEOUT', 'RUNTIME_ERROR', 'INTERNAL_ERROR']:
         return -100
     elif status == 'NO_SUBMISSION':
         return -150
-    else:
-        return 0
+    return 0
+
+
+# ======================================================
+# 🔥 CHUẨN AUTO LOSE – dùng được ngay
+# ======================================================
+def send_auto_lose_event(match_id, loser_username, winner_username):
+    layer = get_channel_layer()
+    async_to_sync(layer.group_send)(
+        f"match_{match_id}",
+        {
+            "type": "anti_cheat_auto_lose",  # <-- Consumer sẽ bắt event này
+            "loser": loser_username,
+            "winner": winner_username
+        }
+    )

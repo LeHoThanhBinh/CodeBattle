@@ -6,10 +6,16 @@ from .serializers import MatchDetailSerializer
 
 class MatchDetailView(generics.RetrieveAPIView):
     """
-    API endpoint để lấy thông tin chi tiết của một trận đấu.
-    Ví dụ: /api/matches/123/
+    /api/matches/<id>/
+    Trả về player1, player2, problem, language, difficulty...
     """
-    queryset = Match.objects.select_related("player1", "player2", "problem").all()
+    queryset = Match.objects.select_related(
+        "player1",
+        "player1__userprofile",
+        "player2",
+        "player2__userprofile",
+        "problem"
+    )
     serializer_class = MatchDetailSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = "id"  # Tìm trận đấu dựa trên ID
+    lookup_field = "id"

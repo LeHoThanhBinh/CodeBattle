@@ -9,7 +9,7 @@ from django.db import connection
 from django.db.models import Count, Window, F
 from django.db.models.functions import Rank, TruncHour
 from django.utils import timezone
-
+from matches.consumers import send_auto_lose_event
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -21,7 +21,6 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from code_battle_api.asgi import SERVER_START_TIME
-
 from problems.models import Problem
 from matches.models import Match
 
@@ -39,6 +38,37 @@ from .serializers import (
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        try:
+            user = User.objects.get(username=request.data.get("username"))
+            profile = user.userprofile
+
+            # SET ONLINE = TRUE
+            profile.is_online = True
+            profile.save(update_fields=['is_online'])
+
+            # BROADCAST TO DASHBOARD
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "dashboard_global",
+                {
+                    "type": "event_user_status_update",
+                    "payload": {
+                        "user_id": user.id,
+                        "username": user.username,
+                        "is_online": True
+                    }
+                }
+            )
+
+        except Exception as e:
+            print("Login online-status error:", e)
+
+        return response
+
 
 
 class RegisterView(generics.CreateAPIView):
@@ -473,3 +503,4 @@ def admin_get_top_players(request):
         return Response(top_players_data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

@@ -40,5 +40,6 @@ urlpatterns = [
     # Frontend sẽ gọi: /api/leaderboard/
     path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     path('stats/<int:user_id>/', PlayerStatsView.as_view(), name='player-stats'),
-    path("update-preferences/", UpdatePreferencesView.as_view(), name="update-preferences"),
+    path("preferences/", UpdatePreferencesView.as_view(), name="update-preferences"),
+
 ]
