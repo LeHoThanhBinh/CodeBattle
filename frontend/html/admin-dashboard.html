@@ -1,8 +1,12 @@
 <div class="admin-layout">
 
+    <!-- ================================
+         SIDEBAR
+    ================================= -->
     <aside class="sidebar">
         <h2 class="sidebar-title">Admin</h2>
         <hr class="divider" />
+
         <ul class="menu">
             <li class="menu-item active" data-target="dashboard"><a>Dashboard</a></li>
             <li class="menu-item" data-target="users"><a>Quản lý Người dùng</a></li>
@@ -12,23 +16,33 @@
         </ul>
     </aside>
 
+    <!-- ================================
+         MAIN CONTENT
+    ================================= -->
     <main class="admin-content">
-        <!-- DASHBOARD -->
+
+        <!-- ===============================
+             DASHBOARD
+        ================================== -->
         <section id="dashboard" class="section active">
             <h2 class="section-title">Dashboard Tổng quan</h2>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3 id="adminTotalUsersStat">0</h3>
                     <p>Tổng Người dùng</p>
                 </div>
+
                 <div class="stat-card">
                     <h3 id="adminActiveUsersStat">0</h3>
                     <p>Người dùng hoạt động</p>
                 </div>
+
                 <div class="stat-card">
                     <h3 id="adminTotalExamsStat">0</h3>
                     <p>Tổng Bộ đề</p>
                 </div>
+
                 <div class="stat-card">
                     <h3 id="adminMatchesTodayStat">0</h3>
                     <p>Trận đấu Hôm nay</p>
@@ -36,9 +50,12 @@
             </div>
         </section>
 
-        <!-- USERS -->
+        <!-- ===============================
+             USERS
+        ================================== -->
         <section id="users" class="section">
             <h2 class="section-title">Quản lý Người dùng</h2>
+
             <div class="table-container">
                 <table>
                     <thead>
@@ -51,18 +68,18 @@
                         </tr>
                     </thead>
                     <tbody id="userTableBody">
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 1rem;">Đang tải dữ liệu...</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align:center; padding:1rem;">Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- EXAMS -->
+        <!-- ===============================
+             EXAMS
+        ================================== -->
         <section id="exams" class="section">
             <h2 class="section-title">Quản lý Bộ đề</h2>
-            
+
             <div class="filter-container">
                 <label for="levelFilter">Lọc theo độ khó:</label>
                 <select id="levelFilter">
@@ -88,18 +105,20 @@
                             <th>Thao tác</th>
                         </tr>
                     </thead>
+
                     <tbody id="examTableBody">
-                        <tr>
-                            <td colspan="6" style="text-align: center; padding: 1rem;">Đang tải dữ liệu...</td>
-                        </tr>
+                        <tr><td colspan="6" style="text-align:center; padding:1rem;">Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- MONITOR -->
+        <!-- ===============================
+             MONITOR
+        ================================== -->
         <section id="monitor" class="section">
             <h2 class="section-title">Giám sát Hoạt động Hệ thống</h2>
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <h3 id="monitorUptimeStat">...</h3>
@@ -121,12 +140,13 @@
 
             <div class="chart-container-wrapper">
                 <h3 class="chart-title">Số trận đấu (24h qua)</h3>
-                <div class="chart-container" id="activityChart">
+                <div class="chart-container">
                     <canvas id="userActivityChartCanvas"></canvas>
                 </div>
             </div>
 
-            <h2 class="section-title" style="margin-top: 30px;">Nhật ký Hoạt động</h2>
+            <h2 class="section-title" style="margin-top:30px;">Nhật ký Hoạt động</h2>
+
             <div class="table-container">
                 <table>
                     <thead>
@@ -140,18 +160,20 @@
                             <th>Thao tác</th>
                         </tr>
                     </thead>
+
                     <tbody id="activityLogTableBody">
-                        <tr>
-                            <td colspan="7" style="text-align: center; padding: 1rem;">Đang tải nhật ký...</td>
-                        </tr>
+                        <tr><td colspan="7" style="text-align:center; padding:1rem;">Đang tải nhật ký...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- REPORTS -->
+        <!-- ===============================
+             REPORTS
+        ================================== -->
         <section id="reports" class="section">
             <h2 class="section-title">Báo cáo & Thống kê</h2>
+
             <div class="report-filters card">
                 <div class="filter-group">
                     <label for="reportType">Loại báo cáo</label>
@@ -160,6 +182,7 @@
                         <option value="exam_performance">Hiệu suất bộ đề</option>
                     </select>
                 </div>
+
                 <div class="filter-group">
                     <label for="timeRange">Khoảng thời gian</label>
                     <select id="timeRange">
@@ -168,6 +191,7 @@
                         <option value="all">Toàn bộ thời gian</option>
                     </select>
                 </div>
+
                 <button id="generateReportBtn" class="report-btn primary">Tạo Báo cáo</button>
                 <button id="exportExcelBtn" class="report-btn secondary">Xuất Excel</button>
             </div>
@@ -181,6 +205,7 @@
 
             <div class="table-container">
                 <h3 class="table-title">Top 10 Người chơi Xuất sắc</h3>
+
                 <table>
                     <thead>
                         <tr>
@@ -191,111 +216,129 @@
                             <th>Tỷ lệ thắng</th>
                         </tr>
                     </thead>
+
                     <tbody id="topPlayersTableBody">
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 1rem;">Đang tải...</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align:center; padding:1rem;">Đang tải...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- MODAL TẠO BỘ ĐỀ -->
-        <div id="createProblemModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Tạo Bộ đề mới</h2>
-                    <span class="close-btn" id="closeCreateModalBtn">&times;</span>
-                </div>
+<!-- ===============================
+     MODAL IMPORT PDF
+================================= -->
+<div id="importProblemModal" class="modal">
+    <div class="modal-content">
 
-                <form id="createProblemForm">
-                    <div class="modal-body">
-                        
-                        <div class="form-group">
-                            <label for="problemTitle">Tiêu đề</label>
-                            <input type="text" id="problemTitle" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="problemDescription">Mô tả bài toán</label>
-                            <textarea id="problemDescription" rows="8" required placeholder="Mô tả chi tiết bài toán, bao gồm input, output, và các ràng buộc..."></textarea>
-                        </div>
-                        
-                        <button type="button" id="generateTestcaseBtn">Tạo Test Case bằng AI</button> 
-                        
-                        <div class="form-group">
-                            <label>Xem trước Test Cases</label>
-                            <div id="testcasePreviewArea" class="testcase-preview-area">
-                                <p>Chưa có test case nào...</p>
-                            </div>
-                        </div>
-
-                        <!-- ĐỘ KHÓ – DO AI TỰ ĐÁNH GIÁ -->
-                        <div class="form-group">
-                            <label for="problemDifficultyDisplay">Độ khó</label>
-
-                            <!-- Ô hiển thị độ khó (không phải input) -->
-                            <div id="problemDifficultyDisplay" class="difficulty-display">
-                                Sẽ được AI tự đánh giá sau khi bạn tạo Test Case
-                            </div>
-                        </div>
-
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="problemTimeLimit">Giới hạn thời gian (ms)</label>
-                                <input type="number" id="problemTimeLimit" value="1000" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="problemMemoryLimit">Giới hạn bộ nhớ (MB)</label>
-                                <input type="number" id="problemMemoryLimit" value="256" required>
-                            </div>
-                        </div>
-
-                    </div>
-                    
-                    <div class="modal-footer">
-                        <button type="button" id="cancelCreateBtn" class="btn-secondary">Hủy</button> 
-                        <button type="submit" class="btn-primary">Lưu Bộ đề</button>
-                    </div>
-                </form>
-            </div>
+        <div class="modal-header">
+            <h2>Import Bộ đề từ PDF</h2>
+            <span class="close-btn" id="closeImportModalBtn">&times;</span>
         </div>
 
-        <!-- MODAL IMPORT BỘ ĐỀ TỪ PDF -->
-        <div id="importProblemModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Import Bộ đề từ PDF</h2>
-                    <span class="close-btn" id="closeImportModalBtn">&times;</span>
+        <form id="importProblemForm" enctype="multipart/form-data">
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <label for="importPdfFile">Chọn file PDF</label>
+                    <input type="file" id="importPdfFile" accept="application/pdf">
                 </div>
 
-                <form id="importProblemForm" enctype="multipart/form-data">
-                    <div class="modal-body">
+                <button type="button" id="uploadPdfBtn">Phân tích PDF bằng AI</button>
 
-                        <div class="form-group">
-                            <label for="importPdfFile">Chọn file PDF</label>
-                            <input type="file" id="importPdfFile" accept="application/pdf" required>
-                        </div>
-
-                        <button type="button" id="uploadPdfBtn">Phân tích PDF bằng AI</button>
-
-                        <div class="form-group">
-                            <label>Kết quả phân tích</label>
-                            <div id="importResultArea" class="testcase-preview-area">
-                                <p>Chưa có dữ liệu...</p>
-                            </div>
-                        </div>
-
+                <div class="form-group">
+                    <label>Kết quả phân tích</label>
+                    <div id="importResultArea" class="testcase-preview-area">
+                        <p>Chưa có dữ liệu...</p>
                     </div>
+                </div>
 
-                    <div class="modal-footer">
-                        <button type="button" id="cancelImportBtn" class="btn-secondary">Hủy</button>
-                        <button type="button" id="saveImportedProblemBtn" class="btn-primary" disabled>Lưu thành Bộ đề</button>
-                    </div>
-                </form>
             </div>
+
+            <div class="modal-footer">
+                <button type="button" id="cancelImportBtn" class="btn-secondary">Hủy</button>
+                <button type="button" id="saveImportedProblemBtn" class="btn-primary" disabled>
+                    Lưu thành Bộ đề
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- ===============================
+     MODAL CHỈNH SỬA BỘ ĐỀ
+     (TÁCH HẲN RA NGOÀI)
+================================= -->
+<div id="editProblemModal" class="modal">
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <h2>Chỉnh sửa Bộ đề</h2>
+            <span class="close-btn" id="closeEditModalBtn">&times;</span>
         </div>
 
-    </main> 
+        <form id="editProblemForm">
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <label for="editProblemTitle">Tiêu đề</label>
+                    <input type="text" id="editProblemTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editProblemDescription">Mô tả bài toán</label>
+                    <textarea id="editProblemDescription" rows="8" required></textarea>
+                </div>
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="editProblemDifficulty">Độ khó</label>
+                        <select id="editProblemDifficulty">
+                            <option value="1">Dễ (1)</option>
+                            <option value="2">Trung bình (2)</option>
+                            <option value="3">Khó (3)</option>
+                            <option value="4">Rất khó (4)</option>
+                            <option value="5">Cực khó (5)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editProblemTimeLimit">Giới hạn thời gian (ms)</label>
+                        <input type="number" id="editProblemTimeLimit" value="1000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editProblemMemoryLimit">Giới hạn bộ nhớ (MB)</label>
+                        <input type="number" id="editProblemMemoryLimit" value="256" required>
+                    </div>
+
+                </div>
+
+                <div class="form-group">
+                    <label>Test Cases</label>
+
+                    <div id="editTestcaseList" class="testcase-edit-list">
+                        <!-- JS sẽ render testcases -->
+                    </div>
+
+                    <button type="button" id="addTestcaseBtn" class="btn-secondary" style="margin-top:8px;">
+                        + Thêm Test Case
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="cancelEditBtn" class="btn-secondary">Hủy</button>
+                <button type="submit" class="btn-primary">Lưu thay đổi</button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+
+    </main>
 </div>

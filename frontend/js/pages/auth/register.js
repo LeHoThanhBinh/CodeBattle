@@ -1,4 +1,4 @@
-import { registerUser } from '../services/auth.js';
+import { registerUser } from '../../services/auth.js';
 
 /**
  * Khởi tạo logic cho trang đăng ký.

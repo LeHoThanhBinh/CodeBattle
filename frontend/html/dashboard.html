@@ -79,7 +79,6 @@
             <div class="panel find-opponent-panel">
                 <h2 class="panel-title">Find Opponent</h2>
 
-                <!-- 🔥 Search bar (đÃ sửa: chỉ còn 1 cái) -->
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search by username...">
                 </div>
@@ -197,6 +196,81 @@
         </div>
 
     </div>
+
+
+    <!-- ========================================================= -->
+    <!-- ===============   TEMPLATE SECTION (NEW)   =============== -->
+    <!-- ========================================================= -->
+
+    <!-- Rank Badge Template -->
+    <template id="tpl-rank-badge">
+        <span class="rank-badge">
+            <span class="rank-icon"></span>
+            <span class="rank-text"></span>
+        </span>
+    </template>
+
+    <!-- Player Item Template -->
+    <template id="tpl-player-item">
+        <div class="player-item">
+            <div class="user-avatar avatar-text"></div>
+
+            <div class="user-details">
+                <div class="player-name"></div>
+
+                <div class="player-rating">
+                    <span class="rank-badge"></span>
+                    <span class="rating-value"></span> pts
+                </div>
+            </div>
+
+            <button class="btn btn-secondary btn-small btn-challenge">Challenge</button>
+        </div>
+    </template>
+
+    <!-- Leaderboard Item Template -->
+    <template id="tpl-leaderboard-item">
+        <div class="leaderboard-item">
+            <div class="leaderboard-rank"></div>
+            <div class="user-avatar avatar-text"></div>
+
+            <div class="leaderboard-details">
+                <div class="player-name"></div>
+            </div>
+
+            <div class="leaderboard-elo"></div>
+        </div>
+    </template>
+
+    <!-- Stats Rating Template -->
+    <template id="tpl-stats-rating">
+        <span class="rank-badge">
+            <span class="rank-icon"></span>
+            <span class="rank-text"></span>
+        </span>
+        <span class="rating-value"></span> pts
+    </template>
+
+    <!-- Challenge Toast Template -->
+    <template id="tpl-challenge-toast">
+        <div class="toast-content">
+            <i class="fa-solid fa-bell toast-icon"></i>
+            <p><strong class="challenger-name"></strong> has challenged you!</p>
+
+            <div class="toast-buttons">
+                <button class="btn btn-primary btn-small accept-btn">Accept</button>
+                <button class="btn btn-secondary btn-small decline-btn">Decline</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Countdown Modal Template -->
+    <template id="tpl-countdown">
+        <div class="modal-content">
+            <h2>Match Found!</h2>
+            <p>Redirecting in <strong class="countdown-number">3</strong>...</p>
+        </div>
+    </template>
 
     <script type="module" src="/js/main.js"></script>
 </body>

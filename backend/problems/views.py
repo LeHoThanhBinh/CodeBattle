@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Problem
 from .serializers import ProblemSerializer
+from .models import Problem, TestCase
 
 
 # ===================================================================
@@ -17,7 +18,7 @@ from .serializers import ProblemSerializer
 # ===================================================================
 
 class ProblemListCreateView(generics.ListCreateAPIView):
-    queryset = Problem.objects.filter(is_active=True)
+    queryset = Problem.objects.all()   # Admin cần thấy cả Active + Locked
     serializer_class = ProblemSerializer
 
     def get_permissions(self):
@@ -26,14 +27,26 @@ class ProblemListCreateView(generics.ListCreateAPIView):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
+        # created_by dùng user hiện tại
         serializer.save(created_by=self.request.user)
 
 
 class ProblemDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Problem.objects.all()
     serializer_class = ProblemSerializer
-    permission_classes = [IsAdminUser]
-    lookup_field = 'pk'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            problem = self.get_object()
+            serializer = self.get_serializer(problem)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 
 
 # ===================================================================

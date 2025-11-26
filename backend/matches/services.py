@@ -1,34 +1,52 @@
-from users.models import UserProfile
+from django.utils import timezone
+from matches.models import Match
+from submissions.models import Submission
+from .utils import apply_normal_match_result  # ⭐ import hàm mới
 
-# Định nghĩa hằng số ELO
-ELO_WIN_GAIN = 49
-ELO_LOSE_LOSS = 50
+def finalize_match(match_id):
+    match = Match.objects.get(pk=match_id)
 
-def update_elo_scores(winner_user, loser_user):
-    """
-    Cập nhật điểm ELO cho người thắng và người thua.
-    Hàm này nhận vào đối tượng User, không phải UserProfile.
-    """
-    try:
-        winner_profile = winner_user.userprofile
-        loser_profile = loser_user.userprofile
-    except UserProfile.DoesNotExist:
-        print(f"Lỗi: Không tìm thấy UserProfile cho {winner_user} hoặc {loser_user}")
-        return
+    sub1 = Submission.objects.filter(match=match, user=match.player1).order_by('-submitted_at').first()
+    sub2 = Submission.objects.filter(match=match, user=match.player2).order_by('-submitted_at').first()
 
-    # --- Logic cộng điểm cho người thắng ---
-    winner_profile.rating += ELO_WIN_GAIN
-    
-    # --- Logic trừ điểm của người thua ---
-    # Đảm bảo điểm không bao giờ âm
-    if loser_profile.rating >= ELO_LOSE_LOSS:
-        loser_profile.rating -= ELO_LOSE_LOSS
+    s1_status = sub1.status if sub1 else 'NO_SUBMISSION'
+    s2_status = sub2.status if sub2 else 'NO_SUBMISSION'
+
+    winner = None
+    result_type = "DRAW"
+
+    # 🎯 Xác định người thắng (giữ logic của bạn)
+    if s1_status == 'ACCEPTED' and s2_status != 'ACCEPTED':
+        winner = match.player1
+        result_type = "PLAYER1_WIN"
+    elif s2_status == 'ACCEPTED' and s1_status != 'ACCEPTED':
+        winner = match.player2
+        result_type = "PLAYER2_WIN"
+    elif s1_status == 'ACCEPTED' and s2_status == 'ACCEPTED':
+        if sub1.execution_time < sub2.execution_time:
+            winner = match.player1
+            result_type = "PLAYER1_WIN"
+        elif sub2.execution_time < sub1.execution_time:
+            winner = match.player2
+            result_type = "PLAYER2_WIN"
+        else:
+            result_type = "DRAW"
     else:
-        loser_profile.rating = 0 # Đặt về 0 nếu trừ đi sẽ bị âm
-        
-    # Lưu thay đổi vào database
-    winner_profile.save()
-    loser_profile.save()
-    
-    print(f"Đã cập nhật ELO: {winner_profile.user.username} (+{ELO_WIN_GAIN}) -> {winner_profile.rating}")
-    print(f"Đã cập nhật ELO: {loser_profile.user.username} (-{ELO_LOSE_LOSS}) -> {loser_profile.rating}")
+        result_type = "DRAW"
+
+    # 🧠 Áp dụng điểm theo kết quả
+    if winner == match.player1:
+        apply_normal_match_result(match.player1, match.player2)
+    elif winner == match.player2:
+        apply_normal_match_result(match.player2, match.player1)
+    # Nếu hòa → không đổi điểm
+
+    match.winner = winner
+    match.status = Match.MatchStatus.COMPLETED
+    match.end_time = timezone.now()
+    match.save()
+
+    return {
+        "winner": winner.username if winner else None,
+        "result": result_type
+    }

@@ -9,6 +9,7 @@ from .models import UserProfile, UserStats, UserActivityLog
 
 logger = logging.getLogger(__name__)
 
+
 # ======================================================
 # AUTH SERIALIZERS
 # ======================================================
@@ -69,9 +70,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data["password"],
         )
 
+
 # ======================================================
-# USER STATS SERIALIZER
-# (cho /api/stats/ và /api/stats/<user_id>/)
+# USER STATS SERIALIZER (/api/stats/)
 # ======================================================
 
 class UserStatsSerializer(serializers.ModelSerializer):
@@ -91,52 +92,39 @@ class UserStatsSerializer(serializers.ModelSerializer):
             "rank",
         )
 
-    def _get_rating(self, obj):
+    def _get_profile(self, obj):
         try:
-            return obj.user.userprofile.rating or 0
-        except (UserProfile.DoesNotExist, AttributeError):
-            return 0
-
-    def get_rating(self, obj):
-        return self._get_rating(obj)
-
-    def get_global_rank(self, obj):
-        try:
-            rating = self._get_rating(obj)
-            higher = UserProfile.objects.filter(rating__gt=rating).count()
-            return higher + 1
-        except Exception:
+            return obj.user.userprofile
+        except UserProfile.DoesNotExist:
             return None
 
+    def get_rating(self, obj):
+        profile = self._get_profile(obj)
+        return profile.rating if profile else 0
+
     def get_rank(self, obj):
-        rating = self._get_rating(obj)
-        if rating <= 1000:
-            return "Bronze"
-        elif rating <= 2000:
-            return "Silver"
-        elif rating <= 3000:
-            return "Gold"
-        else:
-            return "Platinum"
+        profile = self._get_profile(obj)
+        return profile.rank if profile else "Bronze"
+
+    def get_global_rank(self, obj):
+        profile = self._get_profile(obj)
+        if not profile:
+            return None
+        higher = UserProfile.objects.filter(rating__gt=profile.rating).count()
+        return higher + 1
+
 
 # ======================================================
-# USER PROFILE SERIALIZER (model = User)
-# /api/profile/, /api/leaderboard/, /api/online-players/
+# USER PROFILE SERIALIZER (/api/profile/, leaderboard, online players)
 # ======================================================
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    rating = serializers.IntegerField(
-        source="userprofile.rating", read_only=True, default=0
-    )
-    preferred_language = serializers.CharField(
-        source="userprofile.preferred_language", read_only=True
-    )
-    preferred_difficulty = serializers.CharField(
-        source="userprofile.preferred_difficulty", read_only=True
-    )
-
-    global_rank = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
     rank = serializers.SerializerMethodField()
+    global_rank = serializers.SerializerMethodField()
+
+    preferred_language = serializers.SerializerMethodField()
+    preferred_difficulty = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -144,33 +132,43 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "rating",
-            "global_rank",
             "rank",
+            "global_rank",
             "preferred_language",
             "preferred_difficulty",
         )
 
-    def get_global_rank(self, obj):
+    # ------------------------
+    # SAFE GETTERS
+    # ------------------------
+
+    def _get_profile(self, obj):
         try:
-            rating = obj.userprofile.rating
-            if rating is None:
-                return None
-            higher = UserProfile.objects.filter(rating__gt=rating).count()
-            return higher + 1
-        except (UserProfile.DoesNotExist, AttributeError):
+            profile = obj.userprofile
+            profile.refresh_from_db()   # 🔥 FIX CACHE HERE
+            return profile
+        except UserProfile.DoesNotExist:
             return None
 
-    def get_rank(self, obj):
-        try:
-            rating = obj.userprofile.rating or 0
-        except (UserProfile.DoesNotExist, AttributeError):
-            rating = 0
+    def get_rating(self, obj):
+        profile = self._get_profile(obj)
+        return profile.rating if profile else 0
 
-        if rating <= 1000:
-            return "Bronze"
-        elif rating <= 2000:
-            return "Silver"
-        elif rating <= 3000:
-            return "Gold"
-        else:
-            return "Platinum"
+    def get_rank(self, obj):
+        profile = self._get_profile(obj)
+        return profile.rank if profile else "Bronze"
+
+    def get_global_rank(self, obj):
+        profile = self._get_profile(obj)
+        if not profile:
+            return None
+        higher = UserProfile.objects.filter(rating__gt=profile.rating).count()
+        return higher + 1
+
+    def get_preferred_language(self, obj):
+        profile = self._get_profile(obj)
+        return profile.preferred_language if profile else "cpp"
+
+    def get_preferred_difficulty(self, obj):
+        profile = self._get_profile(obj)
+        return profile.preferred_difficulty if profile else "easy"

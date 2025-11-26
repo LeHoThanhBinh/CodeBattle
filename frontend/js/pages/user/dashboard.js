@@ -1,9 +1,9 @@
-import { getUserProfile } from '../services/auth.js';
-import { clearTokens } from '../services/storage.js';
-import { apiFetch } from '../services/api.js';
-import { setupDashboardSocket } from '../services/websocket.js';
-import { disconnectFromDashboardSocket } from './login.js';
-import { disableAntiCheat } from '../services/anti-cheat.js'; 
+import { getUserProfile } from '../../services/auth.js';
+import { clearTokens } from '../../services/storage.js';
+import { apiFetch } from '../../services/api.js';
+import { setupDashboardSocket } from '../../services/websocket.js';
+import { disconnectFromDashboardSocket } from '../auth/login.js';
+import { disableAntiCheat } from '../../services/anti-cheat.js'; 
 
 // --- BIẾN TOÀN CỤC ---
 let spaRouter = null;
@@ -125,12 +125,25 @@ async function showPlayerStatsModal(playerId, playerName) {
     document.getElementById('stats-username').textContent = playerName;
     document.getElementById('stats-avatar').textContent = playerName.substring(0, 2).toUpperCase();
 
+    const statsRating = document.getElementById('stats-rating');
+
     try {
         const stats = await apiFetch(`/api/stats/${playerId}/`);
         const rank = stats.rank || "Bronze";
 
-        document.getElementById('stats-rating').innerHTML =
-            `<span class="rank-badge rank-${rank.toLowerCase()}">${rank}</span> ${stats.rating} pts`;
+        // Xóa nội dung cũ
+        statsRating.innerHTML = "";
+
+        // Tạo badge rank
+        const badge = document.createElement('span');
+        badge.className = `rank-badge rank-${rank.toLowerCase()}`;
+        badge.textContent = rank;
+
+        // Tạo text điểm
+        const ratingText = document.createTextNode(` ${stats.rating} pts`);
+
+        statsRating.appendChild(badge);
+        statsRating.appendChild(ratingText);
 
         document.getElementById('stats-total-battles').textContent = stats.total_battles;
         document.getElementById('stats-win-rate').textContent = `${stats.win_rate}%`;
@@ -138,8 +151,16 @@ async function showPlayerStatsModal(playerId, playerName) {
         document.getElementById('stats-global-rank').textContent = `#${stats.global_rank || 'N/A'}`;
 
     } catch {
-        document.getElementById('stats-rating').innerHTML =
-            `<span class="rank-badge rank-bronze">N/A</span> --- pts`;
+        // Xử lý lỗi: hiển thị N/A
+        statsRating.innerHTML = "";
+        const badge = document.createElement('span');
+        badge.className = 'rank-badge rank-bronze';
+        badge.textContent = 'N/A';
+
+        const ratingText = document.createTextNode(' --- pts');
+
+        statsRating.appendChild(badge);
+        statsRating.appendChild(ratingText);
     }
 }
 
@@ -218,9 +239,18 @@ function handleWebSocketMessage(data, socket, profile) {
             break;
 
         case 'user_update':
-            apiFetch('/api/online-players/')
-                .then(players => renderOnlinePlayers(players, profile));
-            break;
+            Promise.all([
+                apiFetch('/api/online-players/'),
+                apiFetch('/api/profile/')
+            ])
+            .then(([players, updatedProfile]) => {
+                // Cập nhật lại danh sách online theo profile mới
+                renderOnlinePlayers(players, updatedProfile);
+                // Cập nhật lại header (rank, rating, avatar...)
+                updateHeader(updatedProfile);
+            })
+            .catch(err => console.error('Failed to refresh after user_update', err));
+        break;
 
         case 'receive_challenge':
             showChallengeToast(
@@ -259,20 +289,35 @@ function handleWebSocketMessage(data, socket, profile) {
 function showCountdownAndRedirect(matchId) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay countdown-modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h2>Match Found!</h2>
-            <p>Redirecting in <strong id="countdown-timer">3</strong>...</p>
-        </div>
-    `;
+
+    const content = document.createElement('div');
+    content.className = 'modal-content';
+
+    const title = document.createElement('h2');
+    title.textContent = 'Match Found!';
+
+    const p = document.createElement('p');
+    const textBefore = document.createTextNode('Redirecting in ');
+    const strong = document.createElement('strong');
+    strong.id = 'countdown-timer';
+    strong.textContent = '3';
+    const textAfter = document.createTextNode('...');
+
+    p.appendChild(textBefore);
+    p.appendChild(strong);
+    p.appendChild(textAfter);
+
+    content.appendChild(title);
+    content.appendChild(p);
+    modal.appendChild(content);
     document.body.appendChild(modal);
 
     let timeLeft = 3;
-    const timerEl = document.getElementById('countdown-timer');
+    const timerEl = strong;
 
     const interval = setInterval(() => {
         timeLeft--;
-        timerEl.textContent = timeLeft;
+        timerEl.textContent = String(timeLeft);
 
         if (timeLeft <= 0) {
             clearInterval(interval);
@@ -294,6 +339,7 @@ function updateHeader(profile) {
         profile.username.substring(0, 2).toUpperCase();
 
     const rank = profile.rank || "Bronze";
+
     const badge = document.getElementById('userRankBadge');
     badge.textContent = rank;
     badge.className = `rank-badge rank-${rank.toLowerCase()}`;
@@ -303,7 +349,8 @@ function updateStats(stats, profile) {
     document.getElementById('totalBattlesStat').textContent = stats.total_battles;
     document.getElementById('winRateStat').textContent = `${stats.win_rate}%`;
     document.getElementById('streakStat').textContent = stats.current_streak;
-    document.getElementById('rankStat').textContent = `#${profile.global_rank || 'N/A'}`;
+    document.getElementById('rankStat').textContent =
+        `#${profile.global_rank || 'N/A'}`;
 }
 
 // ==============================
@@ -324,32 +371,64 @@ function renderOnlinePlayers(players, profile) {
 
     onlineCount.textContent = filtered.length;
 
+    // Xóa nội dung cũ
+    playerList.innerHTML = "";
+
     if (filtered.length === 0) {
-        playerList.innerHTML = `<p style="text-align:center;opacity:0.6;">No players available in this channel</p>`;
+        const p = document.createElement('p');
+        p.style.textAlign = 'center';
+        p.style.opacity = '0.6';
+        p.textContent = 'No players available in this channel';
+        playerList.appendChild(p);
         return;
     }
 
-    playerList.innerHTML = filtered.map(player => {
+    filtered.forEach(player => {
         const rank = player.rank || "Bronze";
 
-        return `
-            <div class="player-item" data-player-id="${player.id}" data-player-name="${player.username}">
-                <div class="user-avatar">${player.username.substring(0,2).toUpperCase()}</div>
-                <div class="user-details">
-                    <div class="player-name">${player.username}</div>
-                    <div class="player-rating">
-                        <span class="rank-badge rank-${rank.toLowerCase()}">${rank}</span>
-                        ${player.rating} pts
-                    </div>
-                </div>
-                <button class="btn btn-secondary btn-small btn-challenge"
-                    data-opponent-id="${player.id}"
-                    data-opponent-name="${player.username}">
-                    Challenge
-                </button>
-            </div>
-        `;
-    }).join('');
+        const item = document.createElement('div');
+        item.className = 'player-item';
+        item.dataset.playerId = player.id;
+        item.dataset.playerName = player.username;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.textContent = player.username.substring(0, 2).toUpperCase();
+
+        const details = document.createElement('div');
+        details.className = 'user-details';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'player-name';
+        nameEl.textContent = player.username;
+
+        const ratingContainer = document.createElement('div');
+        ratingContainer.className = 'player-rating';
+
+        const rankBadge = document.createElement('span');
+        rankBadge.className = `rank-badge rank-${rank.toLowerCase()}`;
+        rankBadge.textContent = rank;
+
+        const ratingText = document.createTextNode(` ${player.rating} pts`);
+
+        ratingContainer.appendChild(rankBadge);
+        ratingContainer.appendChild(ratingText);
+
+        details.appendChild(nameEl);
+        details.appendChild(ratingContainer);
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary btn-small btn-challenge';
+        btn.dataset.opponentId = player.id;
+        btn.dataset.opponentName = player.username;
+        btn.textContent = 'Challenge';
+
+        item.appendChild(avatar);
+        item.appendChild(details);
+        item.appendChild(btn);
+
+        playerList.appendChild(item);
+    });
 }
 
 // ==============================
@@ -358,18 +437,45 @@ function renderOnlinePlayers(players, profile) {
 function renderLeaderboard(players, currentUserId) {
     const leaderboardList = document.getElementById('leaderboardList');
 
-    leaderboardList.innerHTML = players.map((player, index) => `
-        <div class="leaderboard-item ${player.id === currentUserId ? 'leaderboard-you' : ''}">
-            <div class="leaderboard-rank">${index + 1}</div>
-            <div class="user-avatar">${player.username.substring(0,2).toUpperCase()}</div>
-            <div class="leaderboard-details">
-                <div class="player-name">
-                    ${player.id === currentUserId ? `${player.username} (You)` : player.username}
-                </div>
-            </div>
-            <div class="leaderboard-elo">${player.rating} pts</div>
-        </div>
-    `).join('');
+    // Xóa nội dung cũ
+    leaderboardList.innerHTML = "";
+
+    players.forEach((player, index) => {
+        const item = document.createElement('div');
+        item.className = 'leaderboard-item';
+        if (player.id === currentUserId) {
+            item.classList.add('leaderboard-you');
+        }
+
+        const rankEl = document.createElement('div');
+        rankEl.className = 'leaderboard-rank';
+        rankEl.textContent = String(index + 1);
+
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.textContent = player.username.substring(0, 2).toUpperCase();
+
+        const details = document.createElement('div');
+        details.className = 'leaderboard-details';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'player-name';
+        nameEl.textContent =
+            player.id === currentUserId ? `${player.username} (You)` : player.username;
+
+        const eloEl = document.createElement('div');
+        eloEl.className = 'leaderboard-elo';
+        eloEl.textContent = `${player.rating} pts`;
+
+        details.appendChild(nameEl);
+
+        item.appendChild(rankEl);
+        item.appendChild(avatar);
+        item.appendChild(details);
+        item.appendChild(eloEl);
+
+        leaderboardList.appendChild(item);
+    });
 }
 
 // ==============================

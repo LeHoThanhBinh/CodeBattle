@@ -1,75 +1,51 @@
-from django.utils import timezone
-from matches.models import Match
-from submissions.models import Submission
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
+from users.models import UserProfile
+
+# ===== HẰNG SỐ ĐIỂM =====
+WIN_POINTS = 15       # Thắng +15
+LOSE_POINTS = 20      # Thua -20 (phạt)
+CHEAT_PENALTY = 20    # Gian lận: -20
+
+def _apply_rating_change(user_profile: UserProfile, delta: int):
+    """
+    Thay đổi rating và đảm bảo không bao giờ âm.
+    Có thể kèm update_rank() nếu bạn dùng.
+    """
+    new_rating = user_profile.rating + delta
+    if new_rating < 0:
+        new_rating = 0
+
+    user_profile.rating = new_rating
+
+    # Nếu bạn có logic rank theo rating:
+    if hasattr(user_profile, "update_rank"):
+        user_profile.update_rank()
+
+    user_profile.save()
 
 
-def finalize_match(match_id):
-    match = Match.objects.get(pk=match_id)
+def apply_normal_match_result(winner_user, loser_user):
+    """
+    Trận bình thường: người thắng +15, người thua -20 (không âm).
+    """
+    try:
+        winner_profile = winner_user.userprofile
+        loser_profile = loser_user.userprofile
+    except UserProfile.DoesNotExist:
+        print(f"[Rating] Không tìm thấy UserProfile cho {winner_user} hoặc {loser_user}")
+        return
 
-    sub1 = Submission.objects.filter(match=match, user=match.player1).order_by('-created_at').first()
-    sub2 = Submission.objects.filter(match=match, user=match.player2).order_by('-created_at').first()
-
-    s1_status = sub1.status if sub1 else 'NO_SUBMISSION'
-    s2_status = sub2.status if sub2 else 'NO_SUBMISSION'
-
-    winner = None
-    result_type = "DRAW"
-
-    # 🎯 Xác định người thắng
-    if s1_status == 'ACCEPTED' and s2_status != 'ACCEPTED':
-        winner = match.player1
-        result_type = "PLAYER1_WIN"
-    elif s2_status == 'ACCEPTED' and s1_status != 'ACCEPTED':
-        winner = match.player2
-        result_type = "PLAYER2_WIN"
-    elif s1_status == 'ACCEPTED' and s2_status == 'ACCEPTED':
-        if sub1.execution_time < sub2.execution_time:
-            winner = match.player1
-            result_type = "PLAYER1_WIN"
-        elif sub2.execution_time < sub1.execution_time:
-            winner = match.player2
-            result_type = "PLAYER2_WIN"
-
-    # 🧠 Tính điểm
-    match.player1_rating_change = calculate_rating_change(s1_status, winner == match.player1)
-    match.player2_rating_change = calculate_rating_change(s2_status, winner == match.player2)
-
-    match.winner = winner
-    match.status = Match.MatchStatus.COMPLETED
-    match.end_time = timezone.now()
-    match.save()
-
-    return {
-        "winner": winner.username if winner else None,
-        "result": result_type,
-        "p1_change": match.player1_rating_change,
-        "p2_change": match.player2_rating_change
-    }
+    _apply_rating_change(winner_profile, +WIN_POINTS)
+    _apply_rating_change(loser_profile, -LOSE_POINTS)
 
 
-def calculate_rating_change(status, is_winner):
-    """Tính điểm dựa theo trạng thái kết quả."""
-    if status == 'ACCEPTED':
-        return 50 if is_winner else -25
-    elif status in ['WRONG_ANSWER', 'TIMEOUT', 'RUNTIME_ERROR', 'INTERNAL_ERROR']:
-        return -100
-    elif status == 'NO_SUBMISSION':
-        return -150
-    return 0
+def apply_cheat_penalty(loser_user):
+    """
+    Trận gian lận: chỉ phạt bên gian lận -20, người còn lại không cộng gì.
+    """
+    try:
+        loser_profile = loser_user.userprofile
+    except UserProfile.DoesNotExist:
+        print(f"[Rating] Không tìm thấy UserProfile cho {loser_user}")
+        return
 
-
-# ======================================================
-# 🔥 CHUẨN AUTO LOSE – dùng được ngay
-# ======================================================
-def send_auto_lose_event(match_id, loser_username, winner_username):
-    layer = get_channel_layer()
-    async_to_sync(layer.group_send)(
-        f"match_{match_id}",
-        {
-            "type": "anti_cheat_auto_lose",  # <-- Consumer sẽ bắt event này
-            "loser": loser_username,
-            "winner": winner_username
-        }
-    )
+    _apply_rating_change(loser_profile, -CHEAT_PENALTY)

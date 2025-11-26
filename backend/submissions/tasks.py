@@ -8,7 +8,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import logging
 from users.models import UserProfile, UserStats
-
+from users.services.rating_engine import add_testcase_points
+from users.services.rating_engine import add_match_result_points
 logger = logging.getLogger(__name__)
 
 
@@ -102,9 +103,7 @@ def judge_task(submission_id):
         # ================================================
         try:
             profile = submission.user.userprofile
-            profile.rating += passed
-            profile.update_rank()
-            profile.save(update_fields=["rating", "rank"])
+            add_testcase_points(profile, passed)
         except Exception as score_error:
             logger.error(f"❌ Failed to update rating/rank: {score_error}")
 
@@ -184,30 +183,11 @@ def judge_task(submission_id):
         p1_profile = UserProfile.objects.get(user=s1.user)
         p2_profile = UserProfile.objects.get(user=s2.user)
 
-        WIN_POINTS = 10
-        LOSE_POINTS = -5
-
-        if match.winner is None:
-            pass
-        else:
-            if match.winner == s1.user:
-                p1_profile.rating += WIN_POINTS
-                p2_profile.rating += LOSE_POINTS
-            else:
-                p2_profile.rating += WIN_POINTS
-                p1_profile.rating += LOSE_POINTS
-
-        # Không cho rating âm
-        p1_profile.rating = max(p1_profile.rating, 0)
-        p2_profile.rating = max(p2_profile.rating, 0)
-
-        # Update rank
-        p1_profile.update_rank()
-        p2_profile.update_rank()
-
-        p1_profile.save()
-        p2_profile.save()
-
+        
+        if match.winner == s1.user:
+            add_match_result_points(p1_profile, p2_profile)
+        elif match.winner == s2.user:
+            add_match_result_points(p2_profile, p1_profile)
         # ================================
         # 📡 Gửi event match_end
         # ================================

@@ -1,73 +1,120 @@
-import { initLoginPage } from './pages/login.js';
-import { initRegisterPage } from './pages/register.js';
-import { initDashboardPage } from './pages/dashboard.js';
-import { initAdminDashboardPage } from './pages/admin-dashboard.js';
-import { initBattleRoomPage } from './pages/battle-room.js'; 
+import { initLoginPage } from './pages/auth/login.js';
+import { initRegisterPage } from './pages/auth/register.js';
+import { initDashboardPage } from './pages/user/dashboard.js';
+import { initAdminDashboardPage } from './pages/admin/admin-dashboard.js';
+import { initBattleRoomPage } from './pages/battle/battle-room.js';
 
+
+// ==========================================
+// ROUTER CHÍNH
+// ==========================================
 const router = async () => {
+
     const routes = [
-        { path: "/login", view: (router) => initLoginPage(router) },
-        { path: "/register", view: (router) => initRegisterPage(router) },
-        { path: "/dashboard", view: (router) => initDashboardPage(router) },
-        { path: "/admin-dashboard", view: (router) => initAdminDashboardPage(router) },
-        { path: "/battle-room", view: (router) => initBattleRoomPage(router) }, 
+        { path: "/login", view: initLoginPage },
+        { path: "/register", view: initRegisterPage },
+        { path: "/dashboard", view: initDashboardPage },
+        { path: "/admin-dashboard", view: initAdminDashboardPage },
+        { path: "/battle-room", view: initBattleRoomPage },
     ];
 
+
+    // ----------------------------------------------------
+    // XỬ LÝ TRANG GỐC "/" → tự động chuyển login/dashboard
+    // ----------------------------------------------------
     let currentPath = location.pathname;
 
     if (currentPath === "/" || currentPath === "/index.html") {
-        const defaultPath = sessionStorage.getItem('accessToken') ? "/dashboard" : "/login";
+        const isAuth = !!sessionStorage.getItem("accessToken");
+        const defaultPath = isAuth ? "/dashboard" : "/login";
         history.replaceState(null, null, defaultPath);
         currentPath = defaultPath;
     }
-    
-    const isAuth = !!sessionStorage.getItem('accessToken');
-    
-    const authRoutes = ['/login', '/register'];
+
+
+    // ----------------------------------------------------
+    // CHẶN USER ĐÃ LOGIN KHÔNG CHO VÀO login/register
+    // ----------------------------------------------------
+    const isAuth = !!sessionStorage.getItem("accessToken");
+    const authRoutes = ["/login", "/register"];
+
     if (authRoutes.includes(currentPath) && isAuth) {
         history.replaceState(null, null, "/dashboard");
         currentPath = "/dashboard";
     }
-    
-    // 2. Ngăn người dùng chưa đăng nhập vào các trang cần bảo vệ
-    // <- Đã gộp, thêm '/battle-room'
-    const protectedRoutes = ['/dashboard', '/admin-dashboard', '/battle-room']; 
-    if (protectedRoutes.includes(currentPath) && !isAuth) {
-        console.warn("Access to protected route denied. Redirecting to login.");
+
+
+    // ----------------------------------------------------
+    // BẢO VỆ ROUTE CẦN LOGIN
+    // ----------------------------------------------------
+    const protectedRoutes = [
+        "/dashboard",
+        "/admin-dashboard",
+        "/battle-room"
+    ];
+
+    if (!isAuth && protectedRoutes.includes(currentPath)) {
+        console.warn("Chưa đăng nhập → chuyển về /login");
         history.replaceState(null, null, "/login");
-        router(); 
-        return; 
+        return router();  // chạy lại router()
     }
 
+
+    // ----------------------------------------------------
+    // TÌM ROUTE MATCH
+    // ----------------------------------------------------
     const match = routes.find(route => route.path === currentPath);
+
     if (!match) {
-        document.querySelector("#app").innerHTML = "<h1>404 Not Found</h1><p>Page not found.</p>";
+        document.querySelector("#app").innerHTML = `
+            <h1>404 Not Found</h1>
+            <p>Trang bạn tìm không tồn tại.</p>
+        `;
         return;
     }
-    try {
-        // Tải file HTML tương ứng với đường dẫn (ví dụ: /html/dashboard.html)
-        const html = await fetch(`/html${match.path}.html`).then(data => {
-            if (!data.ok) throw new Error(`HTML template for ${match.path} not found`);
-            return data.text();
-        });
 
+
+    // ----------------------------------------------------
+    // LOAD FILE HTML TƯƠNG ÚNG CHO ROUTE
+    // ----------------------------------------------------
+    try {
+        const htmlPath = `/html${match.path}.html`;
+
+        const res = await fetch(htmlPath);
+        if (!res.ok) throw new Error(`Không tìm thấy HTML: ${htmlPath}`);
+
+        const html = await res.text();
         document.querySelector("#app").innerHTML = html;
+
+        // GỌI INIT PAGE
         match.view(router);
-    } catch (error) {
-        console.error("Failed to load page:", error);
-        document.querySelector("#app").innerHTML = "<h1>Error</h1><p>Could not load page content.</p>";
+
+    } catch (err) {
+        console.error("Lỗi khi load page:", err);
+        document.querySelector("#app").innerHTML = `
+            <h1>Error</h1>
+            <p>Không thể load nội dung trang.</p>
+        `;
     }
 };
 
+
+// ==========================================
+// LẮNG NGHE MỘT LẦN LÚC LOAD TRANG
+// ==========================================
 window.addEventListener("popstate", router);
+
 document.addEventListener("DOMContentLoaded", () => {
-    document.body.addEventListener("click", e => {
-        const anchor = e.target.closest('a[data-link]');
-        if (anchor) {
-            e.preventDefault(); 
-            history.pushState(null, null, anchor.href); 
-            router(); 
-        }
+
+    // SPA Navigation handler
+    document.body.addEventListener("click", (e) => {
+        const a = e.target.closest("a[data-link]");
+        if (!a) return;
+
+        e.preventDefault();
+        history.pushState(null, null, a.href);
+        router();
     });
-    router(); 
+
+    router(); // chạy lần đầu
 });

@@ -1,8 +1,8 @@
-import { apiFetch, API_BASE_URL } from '../services/api.js';
-import { getUserProfile } from '../services/auth.js';
-import { setupBattleSocket } from '../services/websocket.js';
-import { enableAntiCheat } from '../services/anti-cheat.js';
-import { disableAntiCheat } from "../services/anti-cheat.js";
+import { apiFetch, API_BASE_URL } from '../../services/api.js';
+import { getUserProfile } from '../../services/auth.js';
+import { setupBattleSocket } from '../../services/websocket.js';
+import { enableAntiCheat } from '../../services/anti-cheat.js';
+import { disableAntiCheat } from "../../services/anti-cheat.js";
 
 
 let currentUser = null;
@@ -118,6 +118,14 @@ function submitSolution() {
 ====================================================== */
 function handleBattleSocketMessage(data) {
   switch (data.type) {
+    case 'player.event':
+      console.log(`[Battle] Player ${data.payload.event}: ${data.payload.username}`);
+      break;
+
+    case 'match.start':
+      console.log("[Battle] Match officially started!", data.payload);
+      break;
+
     case 'submission_update':
       renderSubmissionResult(data.payload);
       break;
@@ -125,11 +133,7 @@ function handleBattleSocketMessage(data) {
     case 'match_end':
       renderFinalResult(data.payload);
       break;
-
-    case 'anti_cheat_auto_lose':
-      renderFinalResult(data.payload);
-      break;
-
+      
     default:
       console.warn("Unknown:", data.type);
   }
