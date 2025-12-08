@@ -13,6 +13,8 @@ class Match(models.Model):
         ACTIVE = 'ACTIVE', 'Active'
         COMPLETED = 'COMPLETED', 'Completed'
         CANCELLED = 'CANCELLED', 'Cancelled'
+        CHEATING = 'CHEATING', 'Cheating'   
+
 
     player1 = models.ForeignKey(User, related_name='matches_as_player1', on_delete=models.CASCADE)
     player2 = models.ForeignKey(User, related_name='matches_as_player2', on_delete=models.CASCADE)

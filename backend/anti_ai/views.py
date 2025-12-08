@@ -1,65 +1,75 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
 
-from matches.models import Match
-from matches.consumers import send_auto_lose_event
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from .models import AntiCheatLog
 from .services import evaluate_cheating
+from matches.models import Match
 
 
 class AntiCheatLogView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            match_id = request.data.get("match_id")
-            log_type = request.data.get("log_type")
-            details = request.data.get("details") or ""
+        match_id = request.data.get("match_id")
+        log_type = request.data.get("log_type")
+        details = request.data.get("details", "")
 
-            if not match_id:
-                return Response({"error": "match_id missing"}, status=400)
+        # Validate input
+        if not match_id or not log_type:
+            return Response({"error": "missing fields"}, status=400)
 
-            try:
-                match = Match.objects.get(id=match_id)
-            except Match.DoesNotExist:
-                return Response({"error": "invalid match_id"}, status=404)
+        match = get_object_or_404(Match, id=match_id)
 
-            AntiCheatLog.objects.create(
-                user=request.user,
-                match=match,
-                log_type=log_type,
-                details=details,
+        # Nếu trận đã kết thúc → bỏ qua log
+        if match.status in [Match.MatchStatus.COMPLETED,
+                            Match.MatchStatus.CHEATING,
+                            Match.MatchStatus.CANCELLED]:
+            return Response({"status": "IGNORED"})
+
+        # Tạo log gian lận
+        AntiCheatLog.objects.create(
+            user=request.user,
+            match=match,
+            log_type=log_type,
+            details=details,
+        )
+
+        # Kiểm tra vi phạm
+        result = evaluate_cheating(request.user, match)
+
+        if result == "AUTO_LOSE":
+            # Đánh dấu trận đấu đã có gian lận
+            match.status = Match.MatchStatus.CHEATING
+            match.save(update_fields=["status"])
+
+            # Xác định đối thủ
+            if match.player1_id == request.user.id:
+                opponent = match.player2
+            else:
+                opponent = match.player1
+
+            winner_username = opponent.username if opponent else None
+
+            # Gửi WebSocket thông báo kết thúc trận
+            channel_layer = get_channel_layer()
+
+            async_to_sync(channel_layer.group_send)(
+                f"match_{match.id}",
+                {
+                    "type": "match_end",   # gọi method match_end trong consumer
+                    "payload": {
+                        "winner_username": winner_username,
+                        "loser_username": request.user.username,
+                        "loser_reason": "cheating",
+                    },
+                },
             )
 
-            # Evaluate cheating rules
-            result = evaluate_cheating(request.user, match)
+            return Response({"status": "AUTO_LOSE"})
 
-            if result == "AUTO_LOSE":
-                loser = request.user
-                winner = match.player2 if match.player1 == loser else match.player1
-
-                # ❗ Gợi ý: thêm xử lý rating nếu muốn
-                # match.player1_rating_change = ...
-                # match.player2_rating_change = ...
-
-                match.winner = winner
-                match.status = Match.MatchStatus.COMPLETED
-                match.save()
-
-                # Notify both players via WebSocket
-                send_auto_lose_event(match.id, loser.username, winner.username)
-
-                return Response(
-                    {
-                        "message": "auto_lose",
-                        "loser": loser.username,
-                        "winner": winner.username,
-                    }
-                )
-
-            return Response({"message": "logged"}, status=200)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
+        return Response({"status": "OK"})

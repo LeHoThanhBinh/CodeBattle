@@ -1,9 +1,9 @@
 import logging
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils.timezone import localtime
 
 from .models import UserProfile, UserStats, UserActivityLog
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 # ======================================================
-# AUTH SERIALIZERS
+# AUTH SERIALIZER
 # ======================================================
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -26,24 +26,23 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         try:
             profile, _ = UserProfile.objects.get_or_create(user=self.user)
-
             if not profile.is_online:
                 profile.is_online = True
                 profile.save(update_fields=["is_online"])
 
             UserActivityLog.objects.create(user=self.user, activity_type="login")
-
         except Exception as e:
-            logger.error(
-                f"Lỗi khi cập nhật trạng thái/ghi log (user: {self.user.username}): {e}"
-            )
+            logger.error(f"Login status update failed: {e}")
         return data
 
 
+# ======================================================
+# REGISTER SERIALIZER
+# ======================================================
+
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password]
-    )
+    password = serializers.CharField(write_only=True, required=True,
+                                     validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
     email = serializers.EmailField(required=True)
 
@@ -53,14 +52,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
-            raise serializers.ValidationError({"password": "Mật khẩu không khớp."})
+            raise serializers.ValidationError({"password": "Passwords do not match."})
 
         if User.objects.filter(email=attrs["email"]).exists():
-            raise serializers.ValidationError({"email": "Email này đã được sử dụng."})
+            raise serializers.ValidationError({"email": "Email already used."})
+
         if User.objects.filter(username=attrs["username"]).exists():
-            raise serializers.ValidationError(
-                {"username": "Username này đã được sử dụng."}
-            )
+            raise serializers.ValidationError({"username": "Username already taken."})
+
         return attrs
 
     def create(self, validated_data):
@@ -72,7 +71,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 # ======================================================
-# USER STATS SERIALIZER (/api/stats/)
+# USER STATS SERIALIZER  (/api/stats/)
 # ======================================================
 
 class UserStatsSerializer(serializers.ModelSerializer):
@@ -83,14 +82,8 @@ class UserStatsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserStats
-        fields = (
-            "total_battles",
-            "win_rate",
-            "current_streak",
-            "global_rank",
-            "rating",
-            "rank",
-        )
+        fields = ("total_battles", "win_rate", "current_streak",
+                  "global_rank", "rating", "rank")
 
     def _get_profile(self, obj):
         try:
@@ -99,23 +92,23 @@ class UserStatsSerializer(serializers.ModelSerializer):
             return None
 
     def get_rating(self, obj):
-        profile = self._get_profile(obj)
-        return profile.rating if profile else 0
+        p = self._get_profile(obj)
+        return p.rating if p else 0
 
     def get_rank(self, obj):
-        profile = self._get_profile(obj)
-        return profile.rank if profile else "Bronze"
+        p = self._get_profile(obj)
+        return p.rank if p else "Bronze"
 
     def get_global_rank(self, obj):
-        profile = self._get_profile(obj)
-        if not profile:
+        p = self._get_profile(obj)
+        if not p:
             return None
-        higher = UserProfile.objects.filter(rating__gt=profile.rating).count()
+        higher = UserProfile.objects.filter(rating__gt=p.rating).count()
         return higher + 1
 
 
 # ======================================================
-# USER PROFILE SERIALIZER (/api/profile/, leaderboard, online players)
+# USER PROFILE SERIALIZER (/api/profile/)
 # ======================================================
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -125,6 +118,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     preferred_language = serializers.SerializerMethodField()
     preferred_difficulty = serializers.SerializerMethodField()
+
+    is_online = serializers.SerializerMethodField()
+    last_seen = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -136,39 +132,45 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "global_rank",
             "preferred_language",
             "preferred_difficulty",
+            "is_online",
+            "last_seen",
         )
-
-    # ------------------------
-    # SAFE GETTERS
-    # ------------------------
 
     def _get_profile(self, obj):
         try:
-            profile = obj.userprofile
-            profile.refresh_from_db()   # 🔥 FIX CACHE HERE
-            return profile
+            return obj.userprofile
         except UserProfile.DoesNotExist:
             return None
 
     def get_rating(self, obj):
-        profile = self._get_profile(obj)
-        return profile.rating if profile else 0
+        p = self._get_profile(obj)
+        return p.rating if p else 0
 
     def get_rank(self, obj):
-        profile = self._get_profile(obj)
-        return profile.rank if profile else "Bronze"
+        p = self._get_profile(obj)
+        return p.rank if p else "Bronze"
 
     def get_global_rank(self, obj):
-        profile = self._get_profile(obj)
-        if not profile:
+        p = self._get_profile(obj)
+        if not p:
             return None
-        higher = UserProfile.objects.filter(rating__gt=profile.rating).count()
+        higher = UserProfile.objects.filter(rating__gt=p.rating).count()
         return higher + 1
 
     def get_preferred_language(self, obj):
-        profile = self._get_profile(obj)
-        return profile.preferred_language if profile else "cpp"
+        p = self._get_profile(obj)
+        return p.preferred_language if p else "cpp"
 
     def get_preferred_difficulty(self, obj):
-        profile = self._get_profile(obj)
-        return profile.preferred_difficulty if profile else "easy"
+        p = self._get_profile(obj)
+        return p.preferred_difficulty if p else "easy"
+
+    def get_is_online(self, obj):
+        p = self._get_profile(obj)
+        return p.is_online if p else False
+
+    def get_last_seen(self, obj):
+        p = self._get_profile(obj)
+        if not p or not p.last_seen:
+            return None
+        return localtime(p.last_seen).isoformat(timespec="seconds")

@@ -3,12 +3,22 @@ import { initRegisterPage } from './pages/auth/register.js';
 import { initDashboardPage } from './pages/user/dashboard.js';
 import { initAdminDashboardPage } from './pages/admin/admin-dashboard.js';
 import { initBattleRoomPage } from './pages/battle/battle-room.js';
+import { initForgotPage } from './pages/auth/forgot.js';
+import { initVerifyOtpPage } from './pages/auth/verify-otp.js';
+import { initResetPasswordPage } from './pages/auth/reset-password.js';
+import { isAuthenticated } from './services/storage.js';
 
+async function router() {
 
-// ==========================================
-// ROUTER CHÍNH
-// ==========================================
-const router = async () => {
+    if (typeof window.cleanupBattleRoom === "function") {
+        window.cleanupBattleRoom();
+    }
+    window.cleanupBattleRoom = null;
+
+    if (typeof window.cleanupDashboard === "function") {
+        window.cleanupDashboard();
+    }
+    window.cleanupDashboard = null;
 
     const routes = [
         { path: "/login", view: initLoginPage },
@@ -16,97 +26,59 @@ const router = async () => {
         { path: "/dashboard", view: initDashboardPage },
         { path: "/admin-dashboard", view: initAdminDashboardPage },
         { path: "/battle-room", view: initBattleRoomPage },
+        { path: "/forgot", view: initForgotPage },
+        { path: "/verify-otp", view: initVerifyOtpPage },
+        { path: "/reset-password", view: initResetPasswordPage },
     ];
 
-
-    // ----------------------------------------------------
-    // XỬ LÝ TRANG GỐC "/" → tự động chuyển login/dashboard
-    // ----------------------------------------------------
     let currentPath = location.pathname;
+    const isAuth = isAuthenticated();
 
     if (currentPath === "/" || currentPath === "/index.html") {
-        const isAuth = !!sessionStorage.getItem("accessToken");
-        const defaultPath = isAuth ? "/dashboard" : "/login";
-        history.replaceState(null, null, defaultPath);
-        currentPath = defaultPath;
+        const redirect = isAuth ? "/dashboard" : "/login";
+        history.replaceState(null, null, redirect);
+        currentPath = redirect;
     }
 
-
-    // ----------------------------------------------------
-    // CHẶN USER ĐÃ LOGIN KHÔNG CHO VÀO login/register
-    // ----------------------------------------------------
-    const isAuth = !!sessionStorage.getItem("accessToken");
-    const authRoutes = ["/login", "/register"];
-
-    if (authRoutes.includes(currentPath) && isAuth) {
+    if (["/login", "/register"].includes(currentPath) && isAuth) {
         history.replaceState(null, null, "/dashboard");
         currentPath = "/dashboard";
     }
 
-
-    // ----------------------------------------------------
-    // BẢO VỆ ROUTE CẦN LOGIN
-    // ----------------------------------------------------
-    const protectedRoutes = [
-        "/dashboard",
-        "/admin-dashboard",
-        "/battle-room"
-    ];
+    const protectedRoutes = ["/dashboard", "/admin-dashboard", "/battle-room"];
 
     if (!isAuth && protectedRoutes.includes(currentPath)) {
-        console.warn("Chưa đăng nhập → chuyển về /login");
         history.replaceState(null, null, "/login");
-        return router();  // chạy lại router()
-    }
-
-
-    // ----------------------------------------------------
-    // TÌM ROUTE MATCH
-    // ----------------------------------------------------
-    const match = routes.find(route => route.path === currentPath);
-
-    if (!match) {
-        document.querySelector("#app").innerHTML = `
-            <h1>404 Not Found</h1>
-            <p>Trang bạn tìm không tồn tại.</p>
-        `;
+        setTimeout(router, 0);
         return;
     }
 
+    const match = routes.find(r => r.path === currentPath);
 
-    // ----------------------------------------------------
-    // LOAD FILE HTML TƯƠNG ÚNG CHO ROUTE
-    // ----------------------------------------------------
+    if (!match) {
+        document.querySelector("#app").innerHTML = `<h1>404 Not Found</h1>`;
+        return;
+    }
+
     try {
-        const htmlPath = `/html${match.path}.html`;
-
-        const res = await fetch(htmlPath);
-        if (!res.ok) throw new Error(`Không tìm thấy HTML: ${htmlPath}`);
-
+        const res = await fetch(`/html${match.path}.html`);
         const html = await res.text();
         document.querySelector("#app").innerHTML = html;
 
-        // GỌI INIT PAGE
-        match.view(router);
+        requestAnimationFrame(() => {
+            match.view(router);
+        });
 
-    } catch (err) {
-        console.error("Lỗi khi load page:", err);
-        document.querySelector("#app").innerHTML = `
-            <h1>Error</h1>
-            <p>Không thể load nội dung trang.</p>
-        `;
+    } catch (error) {
+        console.error("Router load error:", error);
+        document.querySelector("#app").innerHTML = `<h1>Error loading page</h1>`;
     }
-};
+}
 
-
-// ==========================================
-// LẮNG NGHE MỘT LẦN LÚC LOAD TRANG
-// ==========================================
+window.router = router;
 window.addEventListener("popstate", router);
 
 document.addEventListener("DOMContentLoaded", () => {
-
-    // SPA Navigation handler
     document.body.addEventListener("click", (e) => {
         const a = e.target.closest("a[data-link]");
         if (!a) return;
@@ -116,5 +88,5 @@ document.addEventListener("DOMContentLoaded", () => {
         router();
     });
 
-    router(); // chạy lần đầu
+    router();
 });

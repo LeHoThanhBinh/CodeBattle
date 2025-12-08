@@ -9,7 +9,11 @@ from .views import (
     OnlinePlayersView,
     LeaderboardView,
     PlayerStatsView,
-    UpdatePreferencesView
+    UpdatePreferencesView,
+    ForgotPasswordView, 
+    VerifyOTPView, 
+    ResetPasswordView,
+    logout_user
 )
 
 urlpatterns = [
@@ -41,5 +45,10 @@ urlpatterns = [
     path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     path('stats/<int:user_id>/', PlayerStatsView.as_view(), name='player-stats'),
     path("preferences/", UpdatePreferencesView.as_view(), name="update-preferences"),
-
+    path("forgot-password/", ForgotPasswordView.as_view()),
+    path("verify-otp/", VerifyOTPView.as_view()),
+    path("reset-password/", ResetPasswordView.as_view()),
+    path("logout/", logout_user, name="logout"),
 ]
+
+

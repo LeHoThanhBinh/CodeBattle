@@ -12,12 +12,17 @@ import { initMonitorModule, loadMonitor } from './monitor.js';
 import { initReportsModule, loadReports } from './reports.js';
 
 /* ============================================================
+   GLOBAL STATE
+   ============================================================ */
+let adminSocket = null;
+
+/* ============================================================
    INIT
    ============================================================ */
 export function initAdminDashboardPage() {
     console.log('Admin Dashboard Initialized');
 
-    // Khởi tạo các module con (gắn event listeners, chuẩn bị DOM...)
+    // Khởi tạo module
     initExamsModule();
     initUsersModule();
     initMonitorModule();
@@ -26,8 +31,20 @@ export function initAdminDashboardPage() {
     setupNavigationListeners();
     connectToAdminStatsSocket();
 
-    // Load default: Dashboard
+    // Load mặc định Dashboard
     fetchAdminStats();
+
+    // Cleanup khi rời trang admin
+    window.cleanupAdminDashboard = () => {
+        console.log("🧹 Cleaning Admin Dashboard...");
+
+        try {
+            adminSocket?.close();
+            adminSocket = null;
+        } catch {}
+
+        document.querySelectorAll('.menu-item').forEach(i => (i.onclick = null));
+    };
 }
 
 /* ============================================================
@@ -47,7 +64,7 @@ function setupNavigationListeners() {
             const section = document.getElementById(id);
             if (section) section.classList.add('active');
 
-            // Gọi load dữ liệu tương ứng mỗi tab
+            // Load dữ liệu tương ứng từng tab
             if (id === 'dashboard') fetchAdminStats();
             if (id === 'users') loadUsers();
             if (id === 'exams') loadExams();
@@ -79,43 +96,41 @@ function updateText(id, value) {
 }
 
 /* ============================================================
-   WEBSOCKET – DASHBOARD ACTIVE USERS REALTIME
+   WEBSOCKET – LIVE ACTIVE USERS
    ============================================================ */
 function connectToAdminStatsSocket() {
     const token = getAccessToken();
     if (!token) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/admin/dashboard/`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/admin/dashboard/?token=${token}`;
 
-    const adminSocket = new WebSocket(wsUrl);
+    // Đảm bảo không tạo socket trùng
+    if (adminSocket) {
+        adminSocket.close();
+        adminSocket = null;
+    }
+
+    adminSocket = new WebSocket(wsUrl);
 
     adminSocket.onopen = () => {
-        console.log('Kết nối Admin Stats thành công.');
-        adminSocket.send(
-            JSON.stringify({
-                type: 'auth',
-                token: token
-            })
-        );
+        console.log('🟢 Admin WS connected.');
     };
 
     adminSocket.onmessage = e => {
         const data = JSON.parse(e.data);
 
-        if (data.type === 'stats_update' && data.active_users !== undefined) {
-            console.log('Nhận cập nhật stats:', data.active_users);
+        if (data.type === 'stats_update') {
+            console.log('📊 Active users update:', data.active_users);
             updateText('adminActiveUsersStat', data.active_users);
-        } else if (data.type === 'error') {
-            console.error('Lỗi từ Admin WS:', data.message);
         }
     };
 
     adminSocket.onclose = () => {
-        console.log('Kết nối Admin Stats bị ngắt.');
+        console.log('🔌 Admin WS closed.');
     };
 
     adminSocket.onerror = e => {
-        console.error('Lỗi WebSocket Admin:', e);
+        console.error('❌ Admin WS Error:', e);
     };
 }

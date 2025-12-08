@@ -1,51 +1,78 @@
-from users.models import UserProfile
+# matches/utils.py
+from django.utils import timezone
+from users.models import UserProfile, UserStats
+from matches.models import Match
 
-# ===== HẰNG SỐ ĐIỂM =====
-WIN_POINTS = 15       # Thắng +15
-LOSE_POINTS = 20      # Thua -20 (phạt)
-CHEAT_PENALTY = 20    # Gian lận: -20
+# ====== CẤU HÌNH ĐIỂM ======
+WIN_POINTS = 15       # người thắng +15
+LOSE_POINTS = 20      # người thua -20
+CHEAT_PENALTY = 20    # người gian lận -20
 
-def _apply_rating_change(user_profile: UserProfile, delta: int):
+
+# ==========================================
+# HÀM NỘI BỘ: thay đổi rating an toàn
+# ==========================================
+def _apply_rating_change(profile: UserProfile, delta: int):
     """
-    Thay đổi rating và đảm bảo không bao giờ âm.
-    Có thể kèm update_rank() nếu bạn dùng.
+    Thay đổi rating và đảm bảo rating >= 0.
+    Đồng thời cập nhật rank nếu user có hàm update_rank().
     """
-    new_rating = user_profile.rating + delta
+    new_rating = profile.rating + delta
     if new_rating < 0:
         new_rating = 0
 
-    user_profile.rating = new_rating
+    profile.rating = new_rating
 
-    # Nếu bạn có logic rank theo rating:
-    if hasattr(user_profile, "update_rank"):
-        user_profile.update_rank()
+    # Nếu bạn có hệ thống rank động
+    if hasattr(profile, "update_rank"):
+        profile.update_rank()
 
-    user_profile.save()
+    profile.save(update_fields=["rating", "rank"])
 
 
-def apply_normal_match_result(winner_user, loser_user):
+# ==========================================
+# TRẬN BÌNH THƯỜNG
+# ==========================================
+def apply_normal_match_result(winner, loser):
     """
-    Trận bình thường: người thắng +15, người thua -20 (không âm).
+    Áp dụng kết quả trận hợp lệ:
+    - Winner +15
+    - Loser  -20
+    - Tính vào UserStats bình thường
     """
-    try:
-        winner_profile = winner_user.userprofile
-        loser_profile = loser_user.userprofile
-    except UserProfile.DoesNotExist:
-        print(f"[Rating] Không tìm thấy UserProfile cho {winner_user} hoặc {loser_user}")
-        return
+    winner_p = winner.userprofile
+    loser_p = loser.userprofile
 
-    _apply_rating_change(winner_profile, +WIN_POINTS)
-    _apply_rating_change(loser_profile, -LOSE_POINTS)
+    _apply_rating_change(winner_p, +WIN_POINTS)
+    _apply_rating_change(loser_p, -LOSE_POINTS)
 
 
-def apply_cheat_penalty(loser_user):
+# ==========================================
+# PHÁT HIỆN GIAN LẬN
+# ==========================================
+def apply_cheat_penalty(match: Match, cheater, opponent):
     """
-    Trận gian lận: chỉ phạt bên gian lận -20, người còn lại không cộng gì.
+    XỬ LÝ GIAN LẬN:
+    -----------------------------------------
+    ❌ match.status = CHEATING
+    ❌ winner = None
+    ❌ không cộng/trừ điểm đối thủ
+    ❌ trận KHÔNG được tính vào stats
+    ✔ người gian lận bị trừ rating
+    ✔ end_time được cập nhật
+    ✔ rating_change = 0 (để log)
     """
-    try:
-        loser_profile = loser_user.userprofile
-    except UserProfile.DoesNotExist:
-        print(f"[Rating] Không tìm thấy UserProfile cho {loser_user}")
-        return
 
-    _apply_rating_change(loser_profile, -CHEAT_PENALTY)
+    # 1. Đánh dấu trận bị hủy / gian lận
+    match.status = Match.MatchStatus.CHEATING
+    match.winner = None
+    match.end_time = timezone.now()
+    match.rating_change = 0
+    match.save(update_fields=["status", "winner", "end_time", "rating_change"])
+
+    # 2. Trừ điểm cheater
+    cheater_p = cheater.userprofile
+    _apply_rating_change(cheater_p, -CHEAT_PENALTY)
+
+    # 3. Không thay đổi UserStats → trận gian lận không tính
+    return True

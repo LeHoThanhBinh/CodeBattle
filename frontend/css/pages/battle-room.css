@@ -1,5 +1,5 @@
 /***********************************************
-   ⚔️ BATTLE ROOM — FULL VALORANT THEME
+   ⚔️ BATTLE ROOM — FULL VALORANT THEME (FINAL)
 ************************************************/
 
 :root {
@@ -32,7 +32,6 @@
   align-items: flex-start;
 }
 
-/* Grid layout */
 .battle-container {
   display: grid;
   grid-template-columns: 1fr 1.6fr;
@@ -55,7 +54,21 @@
   position: relative;
 }
 
-/* Glowing border animation */
+/* Custom Scrollbar */
+.left-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.left-panel::-webkit-scrollbar-thumb {
+  background: var(--v-cyan);
+  border-radius: 6px;
+}
+
+.left-panel::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+}
+
+/* Neon border animation */
 .left-panel::before {
   content: "";
   position: absolute;
@@ -74,7 +87,6 @@
   100% { background-position: 0% 50%; }
 }
 
-/* Problem Title */
 .problem-section h2 {
   color: var(--v-cyan);
   font-size: 1.6rem;
@@ -82,7 +94,6 @@
   text-shadow: var(--v-glow);
 }
 
-/* Metadata tags */
 .tag {
   background: rgba(99,179,237,0.15);
   padding: 6px 12px;
@@ -121,6 +132,27 @@
   min-height: 80px;
 }
 
+/* Testcase List */
+.testcase-list {
+  margin-top: 12px;
+  padding-left: 20px;
+}
+
+.testcase-list li {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.pass {
+  color: #48bb78;
+  font-weight: 700;
+}
+
+.fail {
+  color: #f56565;
+  font-weight: 700;
+}
+
 
 /*******************************
    RIGHT PANEL — CODE EDITOR
@@ -136,7 +168,6 @@
   position: relative;
 }
 
-/* Animated neon border */
 .right-panel::before {
   content: "";
   position: absolute;
@@ -178,10 +209,8 @@
   font-size: 1.3rem;
   font-weight: 700;
   color: #000;
-  text-shadow: none;
   box-shadow: 0 0 12px rgba(99,179,237,0.5);
 }
-
 
 /*******************************
    EDITOR SECTION
@@ -193,7 +222,6 @@
   flex: 1;
 }
 
-/* Editor Header (Language Display) */
 .editor-header {
   margin-bottom: 10px;
   font-size: 1.05rem;
@@ -206,7 +234,6 @@
   text-shadow: var(--v-glow);
 }
 
-/* Code Editor */
 .code-editor {
   background: #0f172a;
   color: #e2e8f0;
@@ -228,7 +255,7 @@
 }
 
 /*******************************
-   SUBMIT BUTTON — ABILITY STYLE
+   SUBMIT BUTTON 
 *******************************/
 .submit-btn {
   margin-top: 16px;
@@ -248,9 +275,64 @@
 .submit-btn:hover {
   transform: translateY(-3px) scale(1.02);
   box-shadow: 0 0 20px rgba(229,62,62,0.6);
-  background: linear-gradient(135deg, #ff4f4f, var(--v-red));
 }
 
+/**************************************
+   🎯 FINAL RESULT OVERLAY (WIN/LOSE/DRAW)
+**************************************/
+.battle-result-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+  z-index: 9999;
+}
+
+.battle-result-box {
+  background: #1a202c;
+  padding: 40px 60px;
+  border-radius: 16px;
+  text-align: center;
+  border: 2px solid rgba(99,179,237,0.4);
+  box-shadow: var(--v-shadow);
+  animation: resultPop 0.4s ease;
+}
+
+@keyframes resultPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.battle-result-box h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.battle-result-box h1.win {
+  color: var(--v-cyan);
+  text-shadow: 0 0 12px rgba(99,179,237,0.8);
+}
+
+.battle-result-box h1.lose {
+  color: var(--v-red);
+  text-shadow: 0 0 12px rgba(229,62,62,0.8);
+}
+
+.battle-result-box h1.draw {
+  color: var(--v-purple);
+  text-shadow: 0 0 12px rgba(159,122,234,0.8);
+}
+
+.redirect-message {
+  color: var(--v-muted);
+  margin-top: 10px;
+  font-size: 1rem;
+}
 
 /*******************************
    RESPONSIVE FIX

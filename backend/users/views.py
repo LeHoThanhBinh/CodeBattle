@@ -1,6 +1,3 @@
-# ========================================
-# IMPORTS
-# ========================================
 import time
 from datetime import timedelta
 
@@ -9,7 +6,6 @@ from django.db import connection
 from django.db.models import Count, Window, F
 from django.db.models.functions import Rank, TruncHour
 from django.utils import timezone
-from matches.consumers import send_auto_lose_event
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -19,11 +15,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.core.mail import send_mail
 
 from code_battle_api.asgi import SERVER_START_TIME
 from problems.models import Problem
 from matches.models import Match
-
+from .models import PasswordResetOTP
 from .models import UserProfile, UserStats, UserActivityLog
 from .serializers import (
     MyTokenObtainPairSerializer,
@@ -33,8 +30,17 @@ from .serializers import (
 )
 
 # ========================================
-# AUTHENTICATION
+# LAST SEEN UPDATE MIXIN
 # ========================================
+class TouchLastSeenMixin:
+    """Tự động update last_seen mỗi khi FE gọi API."""
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            profile = request.user.userprofile
+            profile.last_seen = timezone.now()
+            profile.save(update_fields=["last_seen"])
+        return super().dispatch(request, *args, **kwargs)
+
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -46,18 +52,18 @@ class MyTokenObtainPairView(TokenObtainPairView):
             user = User.objects.get(username=request.data.get("username"))
             profile = user.userprofile
 
-            # SET ONLINE = TRUE
             profile.is_online = True
-            profile.save(update_fields=['is_online'])
+            profile.last_seen = timezone.now()
+            profile.save(update_fields=["is_online", "last_seen"])
 
-            # BROADCAST TO DASHBOARD
+            # 🔥 FIX: dùng event_user_update để tránh WS crash
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
                 "dashboard_global",
                 {
-                    "type": "event_user_status_update",
+                    "type": "event_user_update",
                     "payload": {
-                        "user_id": user.id,
+                        "id": user.id,
                         "username": user.username,
                         "is_online": True
                     }
@@ -70,7 +76,6 @@ class MyTokenObtainPairView(TokenObtainPairView):
         return response
 
 
-
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
@@ -80,41 +85,38 @@ class RegisterView(generics.CreateAPIView):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
-    """
-    Log user out + set offline + broadcast status update.
-    """
+
     try:
         user = request.user
-        if user.userprofile.is_online:
-            user.userprofile.is_online = False
-            user.userprofile.save(update_fields=["is_online"])
+        profile = user.userprofile
+        profile.is_online = False
+        profile.last_seen = timezone.now()
+        profile.save(update_fields=["is_online", "last_seen"])
 
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                "dashboard_global",
-                {
-                    "type": "event_user_status_update",
-                    "payload": {
-                        "user_id": user.id,
-                        "username": user.username,
-                        "is_online": False,
-                    },
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            "dashboard_global",
+            {
+                "type": "event_user_update",
+                "payload": {
+                    "id": user.id,
+                    "username": user.username,
+                    "is_online": False,
                 },
-            )
+            },
+        )
 
         return Response({"message": "Logged out"}, status=status.HTTP_200_OK)
+
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # ========================================
 # USER PROFILE + STATS
 # ========================================
 
-class UserProfileView(generics.RetrieveAPIView):
-    """
-    /api/profile/
-    Trả về: id, username, rating, rank, global_rank, preferred_language, preferred_difficulty
-    """
+class UserProfileView(TouchLastSeenMixin, generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -122,41 +124,27 @@ class UserProfileView(generics.RetrieveAPIView):
         return self.request.user
 
 
-class UserStatsView(generics.RetrieveAPIView):
-    """
-    /api/stats/
-    stats của chính mình
-    """
+class UserStatsView(TouchLastSeenMixin, generics.RetrieveAPIView):
     serializer_class = UserStatsSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        try:
-            return self.request.user.stats
-        except UserStats.DoesNotExist:
-            stats, _ = UserStats.objects.get_or_create(user=self.request.user)
-            return stats
+        stats, _ = UserStats.objects.get_or_create(user=self.request.user)
+        return stats
 
 
-class PlayerStatsView(generics.RetrieveAPIView):
-    """
-    /api/stats/<int:user_id>/
-    stats của 1 người chơi (dùng cho modal ở dashboard)
-    """
+class PlayerStatsView(TouchLastSeenMixin, generics.RetrieveAPIView):
     queryset = UserStats.objects.select_related("user").all()
     serializer_class = UserStatsSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = "user_id"
 
+
 # ========================================
-# UPDATE USER PREFERENCES (LANGUAGE + DIFFICULTY)
+# UPDATE USER PREFERENCES
 # ========================================
 
-class UpdatePreferencesView(APIView):
-    """
-    POST /api/preferences/
-    body: { "preferred_language": "cpp", "preferred_difficulty": "easy" }
-    """
+class UpdatePreferencesView(TouchLastSeenMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -169,21 +157,17 @@ class UpdatePreferencesView(APIView):
         if diff:
             profile.preferred_difficulty = diff
 
+        profile.last_seen = timezone.now()
         profile.save()
+
         return Response({"message": "Preferences updated"}, status=status.HTTP_200_OK)
 
+
 # ========================================
-# ONLINE PLAYERS – FILTER THEO LANGUAGE + DIFFICULTY
+# ONLINE PLAYERS — LAST_SEEN LOGIC
 # ========================================
 
-class OnlinePlayersView(generics.ListAPIView):
-    """
-    GET /api/online-players/?search=...
-    – chỉ trả về user:
-        * is_online = True
-        * không phải staff
-        * preferred_language & difficulty giống current user
-    """
+class OnlinePlayersView(TouchLastSeenMixin, generics.ListAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -191,49 +175,41 @@ class OnlinePlayersView(generics.ListAPIView):
         user = self.request.user
         search_term = self.request.query_params.get("search")
 
-        qs = (
-            User.objects.select_related("userprofile")
-            .filter(
-                userprofile__is_online=True,
-                is_staff=False,
-                userprofile__preferred_language=user.userprofile.preferred_language,
-                userprofile__preferred_difficulty=user.userprofile.preferred_difficulty,
-            )
-            .exclude(id=user.id)
-        )
+        qs = User.objects.select_related("userprofile").filter(
+            userprofile__is_online=True,
+            is_staff=False,
+            userprofile__preferred_language=user.userprofile.preferred_language,
+            userprofile__preferred_difficulty=user.userprofile.preferred_difficulty,
+        ).exclude(id=user.id)
 
         if search_term:
             qs = qs.filter(username__icontains=search_term)
 
         return qs
 
+
 # ========================================
-# STATIC LANGUAGE LIST – FRONTEND LOAD DASHBOARD
+# LANGUAGES LIST
 # ========================================
 
 class LanguageList(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response(
-            [
-                {"id": 50, "key": "c", "name": "C (GCC 9.2.0)"},
-                {"id": 54, "key": "cpp", "name": "C++ (G++ 9.2.0)"},
-                {"id": 62, "key": "java", "name": "Java (OpenJDK 13.0.1)"},
-                {"id": 71, "key": "python", "name": "Python (3.8.1)"},
-                {"id": 63, "key": "javascript", "name": "Node.js (12.14.0)"},
-            ]
-        )
+        return Response([
+            {"id": 50, "key": "c", "name": "C (GCC 9.2.0)"},
+            {"id": 54, "key": "cpp", "name": "C++ (G++ 9.2.0)"},
+            {"id": 62, "key": "java", "name": "Java (OpenJDK 13.0.1)"},
+            {"id": 71, "key": "python", "name": "Python (3.8.1)"},
+            {"id": 63, "key": "javascript", "name": "Node.js (12.14.0)"},
+        ])
+
 
 # ========================================
 # LEADERBOARD
 # ========================================
 
-class LeaderboardView(generics.ListAPIView):
-    """
-    /api/leaderboard/
-    Trả về top 5 theo rating
-    """
+class LeaderboardView(TouchLastSeenMixin, generics.ListAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -504,3 +480,69 @@ def admin_get_top_players(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class ForgotPasswordView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "Email not found"}, status=404)
+
+        # Xóa OTP cũ
+        PasswordResetOTP.objects.filter(user=user).delete()
+
+        otp = PasswordResetOTP.generate_otp()
+        expires = timezone.now() + timedelta(minutes=5)
+
+        PasswordResetOTP.objects.create(
+            user=user,
+            otp_code=otp,
+            expires_at=expires
+        )
+
+        send_mail(
+            subject="Your OTP Code",
+            message=f"Your OTP is {otp}. It expires in 5 minutes.",
+            from_email=None,
+            recipient_list=[email]
+        )
+
+        return Response({"message": "OTP sent to email"}, status=200)
+    
+class VerifyOTPView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+
+        try:
+            user = User.objects.get(email=email)
+            otp_obj = PasswordResetOTP.objects.get(user=user, otp_code=otp)
+        except:
+            return Response({"error": "Invalid OTP"}, status=400)
+
+        if not otp_obj.is_valid():
+            otp_obj.delete()
+            return Response({"error": "OTP expired"}, status=400)
+
+        return Response({"message": "OTP verified"}, status=200)
+    
+class ResetPasswordView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        new_password = request.data.get("new_password")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        user.set_password(new_password)
+        user.save()
+
+        PasswordResetOTP.objects.filter(user=user).delete()
+
+        return Response({"message": "Password reset successful"}, status=200)

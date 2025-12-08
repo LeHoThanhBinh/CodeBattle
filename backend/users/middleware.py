@@ -3,37 +3,52 @@ from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
 from urllib.parse import parse_qs
+from django.utils import timezone
 from django.db import close_old_connections
 from django.contrib.auth import get_user_model
+from users.models import UserProfile
 
 User = get_user_model()
 
 @database_sync_to_async
-def get_user(token_key):
+def get_user_from_token(token_key):
     try:
         access_token = AccessToken(token_key)
-        user_id = access_token['user_id']
+        user_id = access_token["user_id"]
         return User.objects.get(id=user_id)
-    except Exception as e:
-        print(f"❌ Lỗi xác thực token WebSocket: {e}")
+    except Exception:
         return AnonymousUser()
 
+@database_sync_to_async
+def update_last_seen(user):
+    UserProfile.objects.filter(user=user).update(
+        is_online=True,
+        last_seen=timezone.now()
+    )
+
 class TokenAuthMiddleware:
-    """Middleware để xác thực người dùng WebSocket qua JWT token."""
+    """Middleware xác thực WebSocket bằng JWT + cập nhật last_seen."""
+
     def __init__(self, inner):
         self.inner = inner
 
     async def __call__(self, scope, receive, send):
-        # Đóng kết nối DB cũ (tránh lỗi Django ORM khi dùng async)
         close_old_connections()
 
-        query_string = scope.get("query_string", b"").decode("utf-8")
-        query_params = parse_qs(query_string)
-        token = query_params.get("token", [None])[0]
+        query_string = scope.get("query_string", b"").decode()
+        params = parse_qs(query_string)
+
+        token = params.get("token", [None])[0]
+
+        user = AnonymousUser()
 
         if token:
-            scope["user"] = await get_user(token)
-        else:
+            user = await get_user_from_token(token)
+
+        if not user.is_authenticated:
             scope["user"] = AnonymousUser()
+        else:
+            scope["user"] = user
+            await update_last_seen(user)
 
         return await self.inner(scope, receive, send)

@@ -1,78 +1,94 @@
-import { getAccessToken } from './storage.js'; // Lấy token từ localStorage/sessionStorage
+import { getAccessToken } from "./storage.js";
 
-// =============================================================
-// 🧩 DASHBOARD SOCKET
-// =============================================================
-export function setupDashboardSocket(onMessageCallback) {
-    const token = getAccessToken();
+let dashboardSocket = null;
+let battleSocket = null;
 
-    if (!token) {
-        console.error("❌ Không tìm thấy Access Token, không thể kết nối WebSocket.");
-        return null;
+const WS_BASE =
+    import.meta.env.VITE_BACKEND_WS ||
+    (window.location.hostname === "localhost"
+        ? `ws://localhost:8000`
+        : `ws://${window.location.hostname}:8000`);
+
+function createWebSocket(url, onMessage) {
+    let socket = null;
+    let pingInterval = null;
+
+    function connect() {
+        socket = new WebSocket(url);
+
+        socket.onopen = () => {
+            pingInterval = setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: "ping" }));
+                }
+            }, 10000);
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                onMessage?.(data);
+            } catch {}
+        };
+
+        socket.onclose = () => {
+            clearInterval(pingInterval);
+        };
+
+        socket.onerror = () => {};
     }
 
-    const socketUrl = `ws://localhost:8000/ws/dashboard/?token=${token}`;
-    const socket = new WebSocket(socketUrl);
+    connect();
 
-    socket.onopen = () => {
-        console.log('✅ [Dashboard] WebSocket connection established.');
-    };
-
-    socket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (onMessageCallback) onMessageCallback(data);
-        } catch (error) {
-            console.error("⚠️ [Dashboard] Error parsing WebSocket message:", error);
+    return {
+        send: (msg) => {
+            if (socket?.readyState === WebSocket.OPEN) {
+                socket.send(msg);
+            }
+        },
+        close: () => {
+            clearInterval(pingInterval);
+            socket?.close();
         }
     };
-
-    socket.onclose = (event) => {
-        console.warn('🔌 [Dashboard] WebSocket connection closed.', event.code);
-    };
-
-    socket.onerror = (error) => {
-        console.error('⚠️ [Dashboard] WebSocket Error:', error);
-    };
-
-    return socket;
 }
 
-// =============================================================
-// ⚔️ BATTLE ROOM SOCKET
-// =============================================================
-export function setupBattleSocket(matchId, onMessageCallback) {
+export function setupDashboardSocket(onMessage) {
     const token = getAccessToken();
-
-    if (!token) {
-        console.error("❌ Không tìm thấy Access Token, không thể kết nối Battle WebSocket.");
-        return null;
+    if (!token) return null;
+    if (dashboardSocket) {
+        dashboardSocket.close();
+        dashboardSocket = null;
     }
 
-    // Kết nối tới kênh battle riêng của từng match
-    const socketUrl = `ws://localhost:8000/ws/matches/${matchId}/?token=${token}`;
-    const socket = new WebSocket(socketUrl);
+    const url = `${WS_BASE}/ws/dashboard/?token=${token}`;
+    dashboardSocket = createWebSocket(url, onMessage);
 
-    socket.onopen = () => {
-        console.log(`⚔️ [Battle ${matchId}] Connected successfully.`);
-    };
+    return dashboardSocket;
+}
 
-    socket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (onMessageCallback) onMessageCallback(data);
-        } catch (error) {
-            console.error(`⚠️ [Battle ${matchId}] Error parsing message:`, error);
-        }
-    };
+export function closeDashboardSocket() {
+    if (dashboardSocket) {
+        dashboardSocket.close();
+        dashboardSocket = null;
+    }
+}
 
-    socket.onclose = (event) => {
-        console.warn(`🔌 [Battle ${matchId}] Connection closed. Code:`, event.code);
-    };
+export function setupBattleSocket(matchId, onMessage) {
+    if (battleSocket) {
+        battleSocket.close();
+    }
 
-    socket.onerror = (error) => {
-        console.error(`⚠️ [Battle ${matchId}] WebSocket error:`, error);
-    };
+    const token = getAccessToken();
+    const url = `${WS_BASE}/ws/matches/${matchId}/?token=${token}`;
+    battleSocket = createWebSocket(url, onMessage);
 
-    return socket;
+    return battleSocket;
+}
+
+export function closeBattleSocket() {
+    if (battleSocket) {
+        battleSocket.close();
+        battleSocket = null;
+    }
 }

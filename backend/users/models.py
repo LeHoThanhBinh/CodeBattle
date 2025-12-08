@@ -2,8 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-
+from django.utils import timezone
+import random
 # ======================================================
 # USER PROFILE (ELO, RANK, SETTINGS)
 # ======================================================
@@ -24,6 +24,7 @@ class UserProfile(models.Model):
     # Channel settings
     preferred_language = models.CharField(max_length=50, default="cpp")
     preferred_difficulty = models.CharField(max_length=20, default="easy")
+    last_seen = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.user.username
@@ -87,7 +88,18 @@ class UserActivityLog(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.activity_type} - {self.timestamp}"
 
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otp_codes")
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
 
+    def is_valid(self):
+        return timezone.now() < self.expires_at
+
+    @staticmethod
+    def generate_otp():
+        return f"{random.randint(100000, 999999)}"
 # ======================================================
 # SIGNALS
 # ======================================================

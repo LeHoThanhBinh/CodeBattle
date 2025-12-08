@@ -20,7 +20,7 @@ urlpatterns = [
 
     
     path('api/', include('problems.urls')),
-    
+    path("api/auth/", include("users.urls")),
     path('api/', include('users.urls')),
     path('api/', include('matches.urls')),
     path("api/", include("submissions.urls")),
@@ -29,7 +29,6 @@ urlpatterns = [
     path('api/admin/stats/', admin_get_stats, name='admin-get-stats'),  
     path('api/logout/', logout_user, name='logout'),
     path("api/anti-cheat/", include("anti_ai.urls")),
-
     path('api/admin/monitor-stats/', admin_get_monitor_stats, name='admin-monitor-stats'),
     path('api/admin/activity-log/', admin_get_activity_log, name='admin-activity-log'),
     path('api/admin/top-players/', admin_get_top_players, name='admin-top-players'),

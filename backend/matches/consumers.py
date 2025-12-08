@@ -1,44 +1,21 @@
-
 import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 from django.db import models
-from .services.match_finalize import finalize_match_auto_lose
+from django.utils import timezone
 
-from .models import Match
-from submissions.tasks import judge_task
+from matches.models import Match
 from submissions.models import Submission
+from submissions.tasks import judge_task
+from matches.utils import apply_cheat_penalty, apply_normal_match_result
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-# ======================================================
-# 🔥 GLOBAL FUNCTION — Send auto lose event to both users
-# ======================================================
-def send_auto_lose_event(match_id, loser_username, winner_username):
-    """
-    Gửi sự kiện xử thua do anti-cheat tới WebSocket group match_x.
-    """
-    layer = get_channel_layer()
-    async_to_sync(layer.group_send)(
-        f"match_{match_id}",
-        {
-            "type": "anti_cheat_auto_lose",
-            "loser": loser_username,
-            "winner": winner_username
-        }
-    )
-
-
-# ======================================================
-# 🔥 WEBSOCKET CONSUMER
-# ======================================================
 class MatchConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
@@ -50,201 +27,261 @@ class MatchConsumer(AsyncWebsocketConsumer):
             await self.close(code=4003)
             return
 
-        # Kiểm tra có đúng người trong trận hay không
         if not await self._is_user_in_match():
             await self.close(code=4003)
             return
 
-        # Join group
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
 
+        # Track user join
         await self._update_connection_status(is_connecting=True)
 
-        # Khi cả 2 vào đủ thì gửi thông tin trận
+        # If both players are now connected → START THE MATCH
         if await self._are_both_players_connected():
+            await self._activate_match()  # 🔥 CRITICAL FIX
             match_data = await self._get_serialized_match_data()
-            await self._broadcast("match.start", match_data)
+            await self._broadcast_event("match.start", match_data)
 
     async def disconnect(self, close_code):
         await self._update_connection_status(is_connecting=False)
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        logger.info(f"👋 {self.user.username} left match {self.match_id}")
+
+        await self._handle_disconnect_auto_lose()
+        logger.info(f"{self.user.username} disconnected match {self.match_id}")
 
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
             action = data.get("action")
 
-            # Dispatch action automatically
             handler = getattr(self, f"handle_{action}", None)
             if handler:
                 await handler(data)
             else:
-                await self.send_event("error", {"message": f"unknown action {action}"})
+                await self._send_event("error", {"message": f"unknown action {action}"})
 
         except Exception as e:
-            logger.error(f"[receive] ERROR: {e}")
-            await self.send_event("error", {"message": "Internal error"})
-
+            logger.error(f"receive ERROR: {e}", exc_info=True)
+            await self._send_event("error", {"message": "internal server error"})
 
     # ======================================================
-    # 🧨 AUTO-LOSE HANDLER (trigger từ anti cheat)
+    #  MATCH END — Called when backend sends type="match_end"
     # ======================================================
-    async def anti_cheat_auto_lose(self, event):
-        loser = event["loser"]
-        winner = event["winner"]
+    async def match_end(self, event):
+        payload = event.get("payload", {})
 
-        # 1️⃣ xử lý kết thúc trận trong database
-        await database_sync_to_async(finalize_match_auto_lose)(
-            self.match_id,
-            loser,
-            winner
+        winner_username = payload.get("winner_username")
+        loser_username = payload.get("loser_username")
+        loser_reason = payload.get("loser_reason", "cheating")
+
+        final_payload = {
+            "winner_username": winner_username,
+            "loser_username": loser_username,
+            "loser_reason": loser_reason,
+        }
+
+        # Broadcast event to both players
+        await self._broadcast_event("match_end", final_payload)
+
+        # Backend cheat penalty
+        if loser_reason == "cheating":
+            await self._finalize_cheat_loss(loser_username)
+
+        await self.channel_layer.group_send(
+            "dashboard_global",
+            {
+                "type": "event_user_update",
+                "payload": await self._get_dashboard_profile(self.user.id)
+            }
+        )
+    # ======================================================
+    # GENERIC GROUP SEND HANDLER
+    # ======================================================
+    async def send_group_message(self, event):
+        await self._send_event(event["event_type"], event["payload"])
+
+    async def _broadcast_event(self, event_type, payload):
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "send_group_message",
+                "event_type": event_type,
+                "payload": payload,
+            },
         )
 
-        # 2️⃣ gửi match_end cho cả hai bên
-        await self._broadcast("match_end", {
-            "winner_username": None,  # vì trận hòa
-            "loser_username": loser,
-            "reason": "anti_cheat"
-        })
-
-
-
-    @database_sync_to_async
-    def _apply_auto_lose(self, loser_username):
-        """
-        Cập nhật DB: loser = thua, winner = thắng
-        """
-        match = Match.objects.get(id=self.match_id)
-
-        # Xác định winner/loser
-        if match.player1.username == loser_username:
-            winner = match.player2
-        else:
-            winner = match.player1
-
-        match.winner = winner
-        match.status = Match.MatchStatus.COMPLETED
-        match.save()
-
-        return True
-
-
     # ======================================================
-    # 🎯 SUBMIT CODE
+    #  CODE SUBMISSION
     # ======================================================
     async def handle_submit_code(self, data):
         code = data.get("code")
-        language = data.get("language")
         problem_id = data.get("problem_id")
+        language = data.get("language")
 
         if not code or not language:
-            await self.send_event("error", {"message": "Missing data"})
+            await self._send_event("error", {"message": "Missing code or language"})
             return
 
-        # Tạo submission
         submission = await database_sync_to_async(Submission.objects.create)(
             match_id=self.match_id,
             user=self.user,
             problem_id=problem_id,
             language=language,
             source_code=code,
-            status=Submission.SubmissionStatus.PENDING
+            status=Submission.SubmissionStatus.PENDING,
         )
 
-        # Gửi pending feedback
-        await self.send_event("submission.pending", {
-            "username": self.user.username,
-            "submission_id": submission.id
-        })
+        await self._send_event(
+            "submission.pending",
+            {"username": self.user.username, "submission_id": submission.id},
+        )
 
-        # Chạy celery judge
+        await self._broadcast_event("opponent_submitted", {"username": self.user.username})
+
         judge_task.delay(submission.id)
 
-
-    # ======================================================
-    # 📡 CELERY EVENTS
-    # ======================================================
     async def submission_update(self, event):
-        await self.send_event("submission_update", event["payload"])
-
-    async def match_end(self, event):
-        await self.send_event("match_end", event["payload"])
-
+        await self._send_event("submission_update", event["payload"])
 
     # ======================================================
-    # 🔧 BROADCAST UTIL
+    # AUTO LOSE ON DISCONNECT
     # ======================================================
-    async def send_event(self, event_type, payload):
-        await self.send(text_data=json.dumps({"type": event_type, "payload": payload}))
+    async def _handle_disconnect_auto_lose(self):
+        users = cache.get(self._cache_key) or []
+        if len(users) == 0:
+            return
 
-    async def _broadcast(self, event_type, payload):
-        await self.channel_layer.group_send(
-            self.group_name,
+        remaining_user_id = list(users)[0]
+        if remaining_user_id == self.user.id:
+            return
+
+        if not await self._is_match_active():
+            return
+
+        loser = self.user
+        winner = await self._get_user_by_id(remaining_user_id)
+
+        await self._finalize_normal_match(winner, loser)
+
+        await self._broadcast_event(
+            "match_end",
             {
-                "type": "send_group_message",
-                "event_type": event_type,
-                "payload": payload
-            }
+                "winner_username": winner.username,
+                "loser_username": loser.username,
+                "loser_reason": "disconnect",
+            },
         )
 
-    async def send_group_message(self, event):
-        await self.send_event(event["event_type"], event["payload"])
+    # ======================================================
+    # DATABASE HELPERS
+    # ======================================================
+    @database_sync_to_async
+    def _activate_match(self):
+        """🔥 CRITICAL FIX — Without this, anti-cheat NEVER triggers."""
+        match = Match.objects.get(id=self.match_id)
+        if match.status != Match.MatchStatus.ACTIVE:
+            match.status = Match.MatchStatus.ACTIVE
+            match.start_time = timezone.now()
+            match.save(update_fields=["status", "start_time"])
+            logger.info(f"Match {self.match_id} → ACTIVE")
 
+    @database_sync_to_async
+    def _is_match_active(self):
+        match = Match.objects.get(id=self.match_id)
+        return match.status == Match.MatchStatus.ACTIVE
+
+    @database_sync_to_async
+    def _get_user_by_id(self, user_id):
+        return User.objects.get(id=user_id)
+
+    @database_sync_to_async
+    def _finalize_normal_match(self, winner, loser):
+        match = Match.objects.get(id=self.match_id)
+
+        if match.status in [
+            Match.MatchStatus.COMPLETED,
+            Match.MatchStatus.CHEATING,
+            Match.MatchStatus.CANCELLED,
+        ]:
+            return
+
+        match.status = Match.MatchStatus.COMPLETED
+        match.end_time = timezone.now()
+        match.winner = winner
+        match.save(update_fields=["status", "end_time", "winner"])
+
+        apply_normal_match_result(winner, loser)
+
+    @database_sync_to_async
+    def _finalize_cheat_loss(self, loser_username):
+        match = Match.objects.select_related("player1", "player2").get(id=self.match_id)
+        cheater = User.objects.get(username=loser_username)
+        opponent = match.player2 if match.player1 == cheater else match.player1
+        apply_cheat_penalty(match, cheater, opponent)
 
     # ======================================================
-    # 👥 USER CONNECTION STATE
+    # UTILITIES
     # ======================================================
+    async def _send_event(self, event_type, payload):
+        await self.send(text_data=json.dumps({"type": event_type, "payload": payload}))
+
     @property
     def _cache_key(self):
         return f"match_{self.match_id}_users"
 
     async def _update_connection_status(self, is_connecting):
-        connected = set(cache.get(self._cache_key) or [])
+        users = set(cache.get(self._cache_key) or [])
 
         if is_connecting:
-            connected.add(self.user.id)
-            event = "joined"
+            users.add(self.user.id)
         else:
-            if self.user.id in connected:
-                connected.remove(self.user.id)
-            event = "left"
+            users.discard(self.user.id)
 
-        cache.set(self._cache_key, list(connected), timeout=3600)
-        await self._broadcast("player.event", {
-            "event": event,
-            "username": self.user.username
-        })
+        cache.set(self._cache_key, list(users), timeout=3600)
+
+        await self._broadcast_event(
+            "player.event",
+            {"event": "joined" if is_connecting else "left", "username": self.user.username},
+        )
 
     async def _are_both_players_connected(self):
         users = cache.get(self._cache_key) or []
-        return len(users) >= 2
+        return len(users) == 2
 
-
-    # ======================================================
-    # 💾 DB QUERIES
-    # ======================================================
     @database_sync_to_async
     def _is_user_in_match(self):
-        return Match.objects.filter(
-            pk=self.match_id
-        ).filter(
+        return Match.objects.filter(pk=self.match_id).filter(
             models.Q(player1=self.user) | models.Q(player2=self.user)
         ).exists()
 
     @database_sync_to_async
     def _get_serialized_match_data(self):
         m = Match.objects.select_related("player1", "player2", "problem").get(pk=self.match_id)
+
         return {
             "id": m.id,
-            "player1": {"id": m.player1.id, "username": m.player1.username},
-            "player2": {"id": m.player2.id, "username": m.player2.username},
+            "player1": {
+                "id": m.player1.id,
+                "username": m.player1.username,
+                "rating": m.player1.userprofile.rating,
+            },
+            "player2": {
+                "id": m.player2.id,
+                "username": m.player2.username,
+                "rating": m.player2.userprofile.rating,
+            },
             "problem": {
                 "title": m.problem.title,
                 "description": m.problem.description,
                 "difficulty": m.problem.difficulty,
                 "timeLimit": m.problem.time_limit,
                 "memoryLimit": m.problem.memory_limit,
-            }
+            },
         }
+
+    @database_sync_to_async
+    def _get_dashboard_profile(self, user_id):
+        user = User.objects.get(id=user_id)
+        from users.serializers import UserProfileSerializer
+        return UserProfileSerializer(user).data
