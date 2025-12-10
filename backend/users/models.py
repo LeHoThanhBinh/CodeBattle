@@ -65,7 +65,7 @@ class UserStats(models.Model):
     total_battles = models.IntegerField(default=0)
     wins = models.IntegerField(default=0)
     current_streak = models.IntegerField(default=0)
-
+    losses = models.IntegerField(default=0)
     @property
     def win_rate(self):
         if self.total_battles == 0:

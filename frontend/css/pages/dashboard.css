@@ -1,7 +1,3 @@
-/***********************************************
-   CODE BATTLE DASHBOARD — VALORANT-INSPIRED STYLE
-************************************************/
-
 :root {
     --v-bg: #0f1419;
     --v-panel: #1a202c;
@@ -17,11 +13,46 @@
     --v-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ============================
-   GLOBAL RESET & BASE
-============================ */
-* {
-    box-sizing: border-box;
+* { box-sizing: border-box; }
+
+.dashboard-page {
+    overflow-y: scroll !important;
+    height: auto !important;
+    min-height: 100vh !important;
+}
+
+.bg-image {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    filter: brightness(0.30) contrast(1.1);
+}
+
+.dashboard-page::before,
+.dashboard-page::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.dashboard-page::before {
+    background: radial-gradient(circle at center,
+        rgba(255, 70, 85, 0.18) 0%,
+        rgba(0, 0, 0, 0.55) 50%,
+        rgba(0, 0, 0, 0.8) 100%
+    );
+}
+
+.dashboard-page::after {
+    background-image: url("/images/pattern-overlay.png");
+    background-size: cover;
+    opacity: 0.06;
+    mix-blend-mode: overlay;
 }
 
 body {
@@ -31,6 +62,7 @@ body {
     padding: 0;
     color: var(--v-text);
     line-height: 1.5;
+    overflow-y: scroll !important;
 }
 
 .dashboard-container {
@@ -42,11 +74,9 @@ body {
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
+    overflow-y: scroll !important;
 }
 
-/* ============================
-   HEADER — SLEEK & GLOWING
-============================ */
 .dashboard-header {
     width: 100%;
     background: linear-gradient(135deg, var(--v-panel), #2d3748);
@@ -144,15 +174,21 @@ body {
     display: inline-block;
 }
 
+.btn-primary {
+    background: linear-gradient(135deg, var(--v-cyan), #bee3f8);
+    color: #000;
+}
+
 .btn-secondary {
     background: var(--v-border);
     color: var(--v-text);
     border: 1px solid var(--v-border);
 }
 
+.btn-primary:hover,
 .btn-secondary:hover {
-    background: var(--v-cyan);
-    color: #000;
+    background: var(--v-red);
+    color: white;
     box-shadow: var(--v-glow);
 }
 
@@ -161,9 +197,6 @@ body {
     font-size: 0.95rem;
 }
 
-/* ============================
-   STATS GRID — GAMING CARDS WITH ICONS
-============================ */
 .stats-grid {
     width: 100%;
     display: grid;
@@ -172,18 +205,6 @@ body {
     margin-bottom: 40px;
     padding: 0 10px;
     list-style: none;
-}
-
-@media (max-width: 1024px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 600px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
 }
 
 .stat-card {
@@ -234,9 +255,7 @@ body {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.stat-info {
-    flex: 1;
-}
+.stat-info { flex: 1; }
 
 .stat-value {
     font-size: 2.2rem;
@@ -253,21 +272,23 @@ body {
     letter-spacing: 1px;
 }
 
-/* ============================
-   MAIN GRID — RESPONSIVE PANELS
-============================ */
 .dashboard-main {
     width: 100%;
     display: grid;
-    grid-template-columns: 1.3fr 1fr;
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas: "find settings" "leaderboard leaderboard";
     gap: 40px;
+    margin-bottom: 40px;
 }
 
-@media (max-width: 1024px) {
-    .dashboard-main {
-        grid-template-columns: 1fr;
-        gap: 30px;
-    }
+.find-opponent-panel { grid-area: find; min-height: 600px; }
+
+.channel-settings-panel { grid-area: settings; display: flex; flex-direction: column; justify-content: space-between; }
+
+.leaderboard-panel { 
+    grid-area: leaderboard; 
+    grid-column: 1 / -1;
+    min-height: 600px;
 }
 
 .panel {
@@ -276,8 +297,9 @@ body {
     border-top: 4px solid var(--v-cyan);
     border-radius: 12px;
     box-shadow: var(--v-shadow);
-    height: fit-content;
     border: 1px solid var(--v-border);
+    display: flex;
+    flex-direction: column;
 }
 
 .panel-title {
@@ -289,6 +311,11 @@ body {
     align-items: center;
     gap: 12px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.panel-title i {
+    font-size: 1.2rem;
+    color: var(--v-purple);
 }
 
 .panel-header {
@@ -316,12 +343,7 @@ body {
     border-color: var(--v-red);
 }
 
-/* ============================
-   FIND OPPONENT PANEL — VIBRANT ELEMENTS
-============================ */
-.search-box {
-    margin-bottom: 24px;
-}
+.search-box { margin-bottom: 24px; }
 
 .search-box input {
     width: 100%;
@@ -351,18 +373,57 @@ body {
 
 .loading-spinner {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 120px;
     color: var(--v-muted);
+    font-size: 1rem;
+    gap: 8px;
+}
+
+.loading-spinner i {
     font-size: 2rem;
 }
 
-/* Player List Items — VALORANT-LIKE CARDS */
-.player-list {
-    max-height: 420px;
-    overflow-y: auto;
+.player-list,
+.leaderboard-list {
+    flex: 1;
+    max-height: 400px;
+    overflow-y: scroll; 
     padding-right: 8px;
+}
+
+.player-list::-webkit-scrollbar,
+.leaderboard-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.player-list::-webkit-scrollbar-track,
+.leaderboard-list::-webkit-scrollbar-track {
+    background: var(--v-border);
+    border-radius: 3px;
+}
+
+.player-list::-webkit-scrollbar-thumb,
+.leaderboard-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--v-cyan), var(--v-purple));
+    border-radius: 3px;
+}
+
+.player-list::-webkit-scrollbar-thumb:hover,
+.leaderboard-list::-webkit-scrollbar-thumb:hover {
+    background: var(--v-red);
+}
+
+.player-list:empty::before,
+.leaderboard-list:empty::before {
+    content: "No players available in this channel";
+    display: block;
+    text-align: center;
+    color: var(--v-muted);
+    font-style: italic;
+    padding: 40px 20px;
 }
 
 .player-item {
@@ -401,19 +462,13 @@ body {
     box-shadow: var(--v-glow);
 }
 
-.player-item:hover::before {
-    opacity: 1;
-}
+.player-item:hover::before { opacity: 1; }
 
 .player-item .user-avatar {
     width: 45px;
     height: 45px;
     font-size: 1rem;
     border: 2px solid var(--v-cyan);
-}
-
-.user-details {
-    flex: 1;
 }
 
 .player-name {
@@ -429,6 +484,8 @@ body {
     align-items: center;
     gap: 6px;
 }
+
+.user-details { flex: 1; }
 
 .btn-challenge {
     margin-left: auto;
@@ -451,26 +508,23 @@ body {
     box-shadow: 0 4px 8px rgba(99, 179, 237, 0.3), var(--v-glow);
 }
 
-/* ============================
-   CHANNEL SETTINGS — VALORANT PREMIUM STYLE
-============================ */
 .channel-settings-panel {
     background: linear-gradient(145deg, rgba(26,32,44,0.85), rgba(45,55,72,0.92));
     padding: 34px;
     border-radius: 14px;
     border: 1px solid rgba(99,179,237,0.2);
-    box-shadow:
-        0 0 25px rgba(0, 0, 0, 0.4),
-        0 0 12px rgba(99,179,237,0.15);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.4), 0 0 12px rgba(99,179,237,0.15);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
-/* Neon border animation */
 .channel-settings-panel::before {
     content: '';
     position: absolute;
-    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    inset: -2px;
     border-radius: 14px;
     background: linear-gradient(120deg, var(--v-purple), var(--v-cyan), var(--v-red));
     background-size: 300% 300%;
@@ -495,7 +549,6 @@ body {
     position: relative;
 }
 
-/* Title underline glow */
 .channel-settings-panel .panel-title::after {
     content: '';
     display: block;
@@ -507,9 +560,6 @@ body {
     box-shadow: 0 0 12px rgba(99,179,237,0.6);
 }
 
-/***********************************************
-   INPUT GROUPS — CLEAN & GLOWING
-************************************************/
 .setting-group {
     margin-bottom: 26px;
     display: flex;
@@ -526,9 +576,6 @@ body {
     padding-left: 4px;
 }
 
-/***********************************************
-   SELECT — VALORANT LOADOUT STYLE
-************************************************/
 .setting-group select {
     appearance: none;
     background: linear-gradient(145deg, #1c2331, #2d3748);
@@ -543,26 +590,17 @@ body {
     position: relative;
 }
 
-/* Hover glow */
 .setting-group select:hover {
     border-color: var(--v-cyan);
-    box-shadow:
-        0 0 10px rgba(99,179,237,0.25),
-        inset 0 0 14px rgba(99,179,237,0.08);
+    box-shadow: 0 0 10px rgba(99,179,237,0.25), inset 0 0 14px rgba(99,179,237,0.08);
 }
 
-/* Focus glowing outline */
 .setting-group select:focus {
     outline: none;
     border-color: var(--v-purple);
-    box-shadow:
-        0 0 15px rgba(159,122,234,0.4),
-        inset 0 0 15px rgba(159,122,234,0.25);
+    box-shadow: 0 0 15px rgba(159,122,234,0.4), inset 0 0 15px rgba(159,122,234,0.25);
 }
 
-/***********************************************
-   SAVE BUTTON — ULTRA PREMIUM GAMING BUTTON
-************************************************/
 #save-channel-btn {
     background: linear-gradient(140deg, var(--v-red), #ff7272);
     color: white;
@@ -576,14 +614,12 @@ body {
     cursor: pointer;
     letter-spacing: 1px;
     transition: all 0.2s ease;
-    box-shadow:
-        0 4px 14px rgba(229,62,62,0.3),
-        inset 0 -3px 6px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 14px rgba(229,62,62,0.3), inset 0 -3px 6px rgba(0,0,0,0.4);
     position: relative;
     overflow: hidden;
+    margin-top: auto;
 }
 
-/* Light sweep animation */
 #save-channel-btn::after {
     content: '';
     position: absolute;
@@ -596,24 +632,11 @@ body {
     transition: all 0.6s ease;
 }
 
-#save-channel-btn:hover::after {
-    left: 120%;
-}
+#save-channel-btn:hover::after { left: 120%; }
 
 #save-channel-btn:hover {
     transform: translateY(-3px) scale(1.03);
-    box-shadow:
-        0 8px 24px rgba(229,62,62,0.45),
-        0 0 12px rgba(255,255,255,0.12);
-}
-
-/* ============================
-   LEADERBOARD PANEL — RANKED LIST
-============================ */
-.leaderboard-list {
-    max-height: 520px;
-    overflow-y: auto;
-    padding-right: 8px;
+    box-shadow: 0 8px 24px rgba(229,62,62,0.45), 0 0 12px rgba(255,255,255,0.12);
 }
 
 .leaderboard-item {
@@ -656,18 +679,13 @@ body {
     margin-left: 16px;
 }
 
-.player-name {
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: var(--v-text);
-}
-
 .leaderboard-elo {
     font-size: 0.9rem;
     color: var(--v-muted);
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
 }
 
 .leaderboard-item:hover {
@@ -677,45 +695,25 @@ body {
     box-shadow: var(--v-glow);
 }
 
-/* ============================
-   RANK BADGES — ENHANCED
-============================ */
-.rank-bronze { 
-    background: linear-gradient(135deg, #cd7f32, #d4af37); 
-    color: #000; 
+.rank-bronze,
+.rank-silver,
+.rank-gold,
+.rank-platinum {
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 600;
-}
-.rank-silver { 
-    background: linear-gradient(135deg, #c0c0c0, #e5e5e5); 
-    color: #000; 
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-.rank-gold { 
-    background: linear-gradient(135deg, #ffd700, #ffed4e); 
-    color: #000; 
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-.rank-platinum { 
-    background: linear-gradient(135deg, #e5e4e2, #f0f0f0); 
-    color: #000; 
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    color: #000;
 }
 
-/* ============================
-   MODALS & TOASTS — CONSISTENT STYLE
-============================ */
+.rank-bronze { background: linear-gradient(135deg, #cd7f32, #d4af37); }
+
+.rank-silver { background: linear-gradient(135deg, #c0c0c0, #e5e5e5); }
+
+.rank-gold { background: linear-gradient(135deg, #ffd700, #ffed4e); }
+
+.rank-platinum { background: linear-gradient(135deg, #e5e4e2, #f0f0f0); }
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -739,6 +737,7 @@ body {
     text-align: center;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
     border: 1px solid var(--v-border);
+    position: relative;
 }
 
 .toast {
@@ -762,19 +761,19 @@ body {
 
 .toast-content {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 16px;
 }
 
 .toast-icon {
     color: var(--v-cyan);
     font-size: 1.4rem;
+    align-self: flex-start;
 }
 
 .toast-buttons {
     display: flex;
     gap: 12px;
-    margin-top: 12px;
     justify-content: flex-end;
 }
 
@@ -790,11 +789,8 @@ body {
     transition: var(--v-transition);
 }
 
-.close-modal-btn:hover {
-    color: var(--v-red);
-}
+.close-modal-btn:hover { color: var(--v-red); }
 
-/* Player Stats Modal */
 .player-stats-modal-content {
     max-width: 550px;
     width: 90%;
@@ -869,7 +865,6 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Timer Bar */
 .timer-bar {
     width: 100%;
     height: 8px;
@@ -888,10 +883,7 @@ body {
     border-radius: 2px;
 }
 
-/* Scrollbar Styling — VALORANT TOUCH */
-::-webkit-scrollbar {
-    width: 8px;
-}
+::-webkit-scrollbar { width: 8px; }
 
 ::-webkit-scrollbar-track {
     background: var(--v-border);
@@ -907,29 +899,30 @@ body {
     background: linear-gradient(135deg, var(--v-cyan), var(--v-red));
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .dashboard-container {
-        padding: 20px 10px;
+@media (max-width: 1024px) {
+    .dashboard-main { 
+        grid-template-columns: 1fr; 
+        grid-template-areas: "find" "settings" "leaderboard"; 
+        gap: 30px; 
     }
-    
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container { padding: 20px 10px; }
     .dashboard-header {
         padding: 20px 16px;
         flex-direction: column;
         gap: 16px;
         text-align: center;
     }
-    
-    .user-section {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    .panel {
-        padding: 20px;
-    }
+    .user-section { flex-direction: column; gap: 12px; }
+    .panel { padding: 20px; min-height: auto; }
+    .player-stats-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .player-list, .leaderboard-list { max-height: 300px; }
+}
 
-    .player-stats-grid {
-        grid-template-columns: 1fr;
-    }
+@media (max-width: 600px) {
+    .stats-grid { grid-template-columns: 1fr; }
 }

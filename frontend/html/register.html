@@ -3,45 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <title>Register - Code Battle</title>
-    <link rel="stylesheet" href="/css/login.css"> 
+    <link rel="stylesheet" href="/css/register.css">
 </head>
 <body>
+
+    <img src="/background login.jpg" class="bg-image" />
+
     <div class="login-container">
         <div class="login-box">
-            <h2 class="login-title">Create Account</h2>
-            <p class="login-subtitle">Join the Code Battle arena!</p>
-            
+
+            <div class="logo-area">
+                <img src="/codebattle.jpg" class="logo">
+                <h2 class="register-title">CREATE ACCOUNT</h2>
+                <p class="login-subtitle">Join the Code Battle Arena</p>
+            </div>
+
             <form id="register-form">
                 <div class="input-group">
-                    <label for="username">Username</label>
+                    <label for="username">USERNAME</label>
                     <input type="text" id="username" name="username" required>
                 </div>
                 
                 <div class="input-group">
-                    <label for="email">Email</label>
+                    <label for="email">EMAIL</label>
                     <input type="email" id="email" name="email" required>
                 </div>
 
                 <div class="input-group">
-                    <label for="password">Password</label>
+                    <label for="password">PASSWORD</label>
                     <input type="password" id="password" name="password" required>
                 </div>
 
                 <div class="input-group">
-                    <label for="password2">Confirm Password</label>
+                    <label for="password2">CONFIRM PASSWORD</label>
                     <input type="password" id="password2" name="password2" required>
                 </div>
 
-                <button type="submit" class="btn-login">Register</button>
+                <button type="submit" class="btn-register">REGISTER</button>
             </form>
-            
-            <p id="error-message" class="error-message" style="display: none;"></p>
-            <p id="success-message" class="success-message" style="display: none;"></p>
+
+            <div id="error-message" class="error-message"></div>
+            <div id="success-message" class="success-message"></div>
 
             <div class="login-footer">
                 <p>Already have an account? <a href="/login" data-link>Login here</a></p>
             </div>
+
         </div>
     </div>
+
 </body>
 </html>
