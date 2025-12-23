@@ -9,11 +9,6 @@ from .models import UserProfile, UserStats, UserActivityLog
 
 logger = logging.getLogger(__name__)
 
-
-# ======================================================
-# AUTH SERIALIZER
-# ======================================================
-
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -34,11 +29,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         except Exception as e:
             logger.error(f"Login status update failed: {e}")
         return data
-
-
-# ======================================================
-# REGISTER SERIALIZER
-# ======================================================
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True,
@@ -68,11 +58,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data["email"],
             password=validated_data["password"],
         )
-
-
-# ======================================================
-# USER STATS SERIALIZER  (/api/stats/)
-# ======================================================
 
 class UserStatsSerializer(serializers.ModelSerializer):
     win_rate = serializers.IntegerField(read_only=True)
@@ -105,11 +90,6 @@ class UserStatsSerializer(serializers.ModelSerializer):
             return None
         higher = UserProfile.objects.filter(rating__gt=p.rating).count()
         return higher + 1
-
-
-# ======================================================
-# USER PROFILE SERIALIZER (/api/profile/)
-# ======================================================
 
 class UserProfileSerializer(serializers.ModelSerializer):
     rating = serializers.SerializerMethodField()

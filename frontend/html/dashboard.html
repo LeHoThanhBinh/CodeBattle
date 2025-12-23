@@ -5,11 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Battle - Dashboard</title>
-
-    <!-- CSS Dashboard -->
     <link rel="stylesheet" href="/css/pages/dashboard.css">
-
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
@@ -17,7 +13,6 @@
     <img src="/background dashboard.jpg" class="bg-image" alt="Dashboard Background" />
     <div class="dashboard-container">
 
-        <!-- HEADER -->
         <header class="dashboard-header" id="userInfo">
             <div class="logo-section">
                 <div class="logo-icon">CB</div>
@@ -37,7 +32,6 @@
             </div>
         </header>
 
-        <!-- STATS GRID -->
         <ul class="stats-grid" id="statsGrid">
             <li class="stat-card">
                 <div class="stat-icon"><i class="fa-solid fa-trophy"></i></div>
@@ -72,10 +66,7 @@
             </li>
         </ul>
 
-        <!-- MAIN LAYOUT -->
         <main class="dashboard-main">
-
-            <!-- FIND OPPONENT PANEL -->
             <section class="panel find-opponent-panel" style="--grid-area: find;">
                 <h2 class="panel-title">
                     <i class="fa-solid fa-users"></i> Find Opponent
@@ -96,7 +87,6 @@
                 </div>
             </section>
 
-            <!-- CHANNEL SETTINGS PANEL -->
             <aside class="panel channel-settings-panel" style="--grid-area: settings;">
                 <h2 class="panel-title">
                     <i class="fa-solid fa-cog"></i> Channel Settings
@@ -119,25 +109,24 @@
                 <button id="save-channel-btn" class="btn btn-primary">Save Settings</button>
             </aside>
 
-            <!-- LEADERBOARD PANEL -->
             <section class="panel leaderboard-panel" style="--grid-area: leaderboard;">
                 <div class="panel-header">
                     <h2 class="panel-title">
                         <i class="fa-solid fa-trophy"></i> Leaderboard
                     </h2>
+                    <a href="/history" class="history-link" data-route="history">History</a>
                     <a href="/leaderboard" class="view-all-link" data-link>View All →</a>
-                </div>
-
-                <div class="leaderboard-list" id="leaderboardList">
-                    <div class="loading-spinner">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Loading Top Players...
                     </div>
-                </div>
+
+                    <div class="leaderboard-list" id="leaderboardList">
+                        <div class="loading-spinner">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Loading Top Players...
+                        </div>
+                    </div>
             </section>
 
         </main>
 
-        <!-- WAITING MODAL -->
         <div id="challenge-waiting-modal" class="modal-overlay" style="display:none;">
             <div class="modal-content">
                 <h3>Challenge Sent!</h3>

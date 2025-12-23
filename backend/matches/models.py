@@ -4,10 +4,6 @@ from django.db.models import Q, F
 from problems.models import Problem
 
 class Match(models.Model):
-    """
-    Model đại diện cho một trận đấu, được tối ưu hóa với các ràng buộc
-    và lựa chọn on_delete thông minh để bảo toàn dữ liệu.
-    """
     class MatchStatus(models.TextChoices):
         PENDING = 'PENDING', 'Pending'
         ACTIVE = 'ACTIVE', 'Active'
@@ -40,7 +36,6 @@ class Match(models.Model):
     rating_change = models.IntegerField(null=True, blank=True, help_text="Điểm rating thay đổi sau trận đấu.")
 
     class Meta:
-        # Ràng buộc quan trọng: Ngăn một người tự đấu với chính mình.
         constraints = [
             models.CheckConstraint(
                 check=~Q(player1=F('player2')),

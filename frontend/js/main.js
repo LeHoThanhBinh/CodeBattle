@@ -7,6 +7,7 @@ import { initForgotPage } from './pages/auth/forgot.js';
 import { initVerifyOtpPage } from './pages/auth/verify-otp.js';
 import { initResetPasswordPage } from './pages/auth/reset-password.js';
 import { isAuthenticated } from './services/storage.js';
+import { initHistoryPage } from './pages/user/history.js';
 
 async function router() {
 
@@ -29,6 +30,7 @@ async function router() {
         { path: "/forgot", view: initForgotPage },
         { path: "/verify-otp", view: initVerifyOtpPage },
         { path: "/reset-password", view: initResetPasswordPage },
+        { path: "/history", view: initHistoryPage },
     ];
 
     let currentPath = location.pathname;
@@ -45,7 +47,7 @@ async function router() {
         currentPath = "/dashboard";
     }
 
-    const protectedRoutes = ["/dashboard", "/admin-dashboard", "/battle-room"];
+    const protectedRoutes = ["/dashboard", "/admin-dashboard", "/battle-room", "/history"];
 
     if (!isAuth && protectedRoutes.includes(currentPath)) {
         history.replaceState(null, null, "/login");

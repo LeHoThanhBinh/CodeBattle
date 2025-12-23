@@ -1,0 +1,112 @@
+.page-header {
+    margin-bottom: 20px;
+}
+
+.page-header h2 {
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.page-header p {
+    color: #a0a0b5;
+    font-size: 14px;
+}
+
+.history-card {
+    background: rgba(30, 35, 55, 0.95);
+    padding: 22px;
+    border-radius: 14px;
+    max-width: 900px;   
+    margin: 0 auto;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.history-table thead {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.history-table th {
+    padding: 14px;
+    font-size: 13px;
+    color: #b8b8d0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.history-table td {
+    padding: 14px;
+    font-size: 14px;
+    color: #e0e0f0;
+    text-align: left;
+}
+
+.history-table tbody tr {
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.2s ease;
+}
+
+.history-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.status {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status.win {
+    background: rgba(0, 200, 83, 0.2);
+    color: #00e676;
+}
+
+.status.lose {
+    background: rgba(244, 67, 54, 0.2);
+    color: #ff5252;
+}
+
+.status.draw {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffd54f;
+}
+
+.detail-link {
+    color: var(--v-cyan);
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.detail-link:hover {
+    text-decoration: underline;
+}
+
+.result-win {
+    color: #38a169;
+    font-weight: 600;
+}
+
+.result-lose {
+    color: #e53e3e;
+    font-weight: 600;
+}
+
+.result-draw {
+    color: #d69e2e;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .history-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}

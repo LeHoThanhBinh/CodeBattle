@@ -1,30 +1,15 @@
-/* ============================================================
-   USERS MODULE – QUẢN LÝ NGƯỜI DÙNG
-   ============================================================ */
-
 import { fetchUsersAPI, deleteUserAPI } from '../../services/userService.js';
 
 let usersLoadedOnce = false;
 
-/* ============================================================
-   INIT
-   ============================================================ */
 export function initUsersModule() {
     setupUserTableListeners();
 }
 
-/**
- * Hàm được gọi khi click tab "users"
- */
 export function loadUsers() {
-    // Có thể luôn reload, hoặc chỉ load lần đầu.
-    // Ở đây: luôn reload để dữ liệu mới nhất
     fetchAndRenderUsers();
 }
 
-/* ============================================================
-   FETCH & RENDER
-   ============================================================ */
 async function fetchAndRenderUsers() {
     const tableBody = document.getElementById('userTableBody');
     if (!tableBody) return;
@@ -45,19 +30,15 @@ async function fetchAndRenderUsers() {
             const tr = document.createElement('tr');
             tr.dataset.id = user.id;
 
-            // ID
             const tdId = document.createElement('td');
             tdId.textContent = user.id;
 
-            // Name
             const tdName = document.createElement('td');
             tdName.textContent = user.name;
 
-            // Email
             const tdEmail = document.createElement('td');
             tdEmail.textContent = user.email;
 
-            // Status
             const tdStatus = document.createElement('td');
             const spanStatus = document.createElement('span');
             spanStatus.classList.add('status');
@@ -65,7 +46,6 @@ async function fetchAndRenderUsers() {
             spanStatus.textContent = user.status || 'UNKNOWN';
             tdStatus.appendChild(spanStatus);
 
-            // Actions
             const tdActions = document.createElement('td');
             const btnEdit = document.createElement('button');
             btnEdit.classList.add('action-btn', 'edit');
@@ -93,9 +73,6 @@ async function fetchAndRenderUsers() {
     }
 }
 
-/* ============================================================
-   TABLE EVENTS
-   ============================================================ */
 function setupUserTableListeners() {
     const tableBody = document.getElementById('userTableBody');
     if (!tableBody) return;
@@ -109,7 +86,6 @@ function setupUserTableListeners() {
 
         const userId = row.dataset.id;
 
-        // DELETE
         if (target.classList.contains('delete')) {
             if (!confirm('Bạn có chắc chắn muốn xóa người dùng này không?')) return;
 
@@ -122,17 +98,44 @@ function setupUserTableListeners() {
             }
         }
 
-        // EDIT (tạm thời chưa triển khai)
         if (target.classList.contains('edit')) {
-            console.log('Chỉnh sửa người dùng ID:', userId);
-            alert('Chức năng Edit chưa được cài đặt.');
+            const username = row.children[1].textContent;
+            const email = row.children[2].textContent;
+
+            const newUsername = prompt("Username:", username);
+            if (newUsername === null) return;
+
+            const newEmail = prompt("Email:", email);
+            if (newEmail === null) return;
+
+            const newPassword = prompt("New password (để trống nếu không đổi):");
+
+            try {
+                await fetch(`/api/admin/users/${userId}/update/`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${sessionStorage.getItem("accessToken")}`
+                    },
+                    body: JSON.stringify({
+                        username: newUsername,
+                        email: newEmail,
+                        password: newPassword || undefined
+                    })
+                });
+
+                row.children[1].textContent = newUsername;
+                row.children[2].textContent = newEmail;
+
+                alert("Cập nhật người dùng thành công!");
+            } catch (err) {
+                console.error(err);
+                alert("Cập nhật thất bại!");
+            }
         }
     });
 }
 
-/* ============================================================
-   HELPER – TABLE
-   ============================================================ */
 function clearTableBody(tbody) {
     while (tbody.firstChild) {
         tbody.removeChild(tbody.firstChild);

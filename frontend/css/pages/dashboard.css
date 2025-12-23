@@ -320,14 +320,24 @@ body {
 
 .panel-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--v-border);
 }
 
-.view-all-link {
+.history-link {
+    color: var(--v-cyan);
+    font-size: 1rem;
+    text-decoration: none;
+    transition: var(--v-transition);
+    margin-left: auto;
+    padding: 8px 8px 8px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+}
+
+.view-all-link{
     color: var(--v-cyan);
     font-size: 1rem;
     text-decoration: none;
@@ -337,7 +347,7 @@ body {
     border: 1px solid transparent;
 }
 
-.view-all-link:hover {
+.view-all-link:hover, .history-link:hover {
     color: var(--v-red);
     background: rgba(229, 62, 62, 0.1);
     border-color: var(--v-red);

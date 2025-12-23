@@ -278,6 +278,27 @@ def admin_get_users(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(["PUT"])
+@permission_classes([IsAdminUser])
+def admin_update_user(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    username = request.data.get("username")
+    email = request.data.get("email")
+    password = request.data.get("password")
+
+    if username:
+        user.username = username
+    if email:
+        user.email = email
+    if password:
+        user.set_password(password)
+
+    user.save()
+    return Response({"message": "User updated successfully"})
 
 @api_view(["DELETE"])
 @permission_classes([IsAdminUser])
